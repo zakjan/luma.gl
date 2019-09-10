@@ -21,14 +21,16 @@
 // Special utility functions for df64 tests
 
 import {Model} from '@luma.gl/core';
+// import {isWebGL2} from '@luma.gl/webgl';
 import GL from '@luma.gl/constants';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 
-test.only('shadertools#extension derivative', t => {
+test('shadertools#extension derivative', t => {
   const {gl} = fixture;
-
-  // Avoid re-using program from ProgramManager
+  // console.log(`isWebGL2: ${isWebGL2(gl)}`);
+  // const extSupported = Boolean(gl.getExtension('OES_standard_derivatives'));
+  // console.log(`OES_standard_derivatives support: ${extSupported}`);
   const vs = 'void main() {gl_Position = vec4(0.0);}';
   const fs = `\
 #if (__VERSION__ < 300)

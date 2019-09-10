@@ -85,7 +85,7 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
   ) {
     versionDefines += `\
 // DRAW_BUFFERS => gl_FragData[] is available
-#extension GL_EXT_draw_buffers : require
+#extension GL_EXT_draw_buffers : enable
 #ifdef GL_EXT_draw_buffers
 #define DRAW_BUFFERS
 #endif
