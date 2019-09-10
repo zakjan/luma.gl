@@ -6,6 +6,7 @@ import './lib/transpile-shader.spec.js';
 import './lib/assemble-shaders.spec.js';
 import './lib/resolve-modules.spec';
 import './lib/shader-module.spec';
+import './lib/platform-defines.spec';
 
 import './modules';
 
