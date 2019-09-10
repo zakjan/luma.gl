@@ -60,8 +60,8 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
   if (hasFeatures(gl, FEATURES.GLSL_FRAG_DEPTH)) {
     versionDefines += `\
 // FRAG_DEPTH => gl_FragDepth is available
-#ifdef GL_EXT_frag_depth
 #extension GL_EXT_frag_depth : enable
+#ifdef GL_EXT_frag_depth
 # define FRAG_DEPTH
 # define gl_FragDepth gl_FragDepthEXT
 #endif
@@ -73,8 +73,8 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
   ) {
     versionDefines += `\
 // DERIVATIVES => dxdF, dxdY and fwidth are available
-#ifdef GL_OES_standard_derivatives
 #extension GL_OES_standard_derivatives : enable
+#ifdef GL_OES_standard_derivatives
 # define DERIVATIVES
 #endif
 `;
@@ -85,8 +85,8 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
   ) {
     versionDefines += `\
 // DRAW_BUFFERS => gl_FragData[] is available
-#ifdef GL_EXT_draw_buffers
 #extension GL_EXT_draw_buffers : require
+#ifdef GL_EXT_draw_buffers
 #define DRAW_BUFFERS
 #endif
 `;
@@ -94,8 +94,8 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
   if (hasFeatures(gl, FEATURES.GLSL_TEXTURE_LOD)) {
     versionDefines += `\
 // TEXTURE_LOD => texture2DLod etc are available
-#ifdef GL_EXT_shader_texture_lod
 #extension GL_EXT_shader_texture_lod : enable
+#ifdef GL_EXT_shader_texture_lod
 # define TEXTURE_LOD
 #define texture2DLod texture2DLodEXT
 #define texture2DProjLod texture2DProjLodEXT

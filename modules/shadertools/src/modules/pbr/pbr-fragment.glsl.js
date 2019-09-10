@@ -5,11 +5,6 @@
 // MIT license, Copyright (c) 2016-2017 Mohamad Moneimne and Contributors
 
 export default `\
-#if (__VERSION__ < 300)
-#extension GL_EXT_shader_texture_lod: enable
-#extension GL_OES_standard_derivatives : enable
-#endif
-
 // WebGL 1.0 does not support non-constant in for loops
 // This provides an easy way to handle these cases
 // and still take advantage of WebGL 2.0
