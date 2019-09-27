@@ -1,11 +1,14 @@
 // decorate tape-catch with tape-promise
 import test_ from 'tape-catch';
 import tapePromise from 'tape-promise';
-export default tapePromise(test_);
-export {default as deepCopy} from './deep-copy';
+
+import '@loaders.gl/polyfills';
 
 import {setContextDefaults, createGLContext} from '@luma.gl/core';
 import {makeDebugContext} from '@luma.gl/debug';
+
+export default tapePromise(test_);
+export {default as deepCopy} from './deep-copy';
 
 export {getResourceCounts, getLeakedResources} from './resource-tracker.js';
 

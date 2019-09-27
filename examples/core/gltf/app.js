@@ -1,15 +1,14 @@
 /* eslint-disable camelcase */
 /* global document, window */
-import {parse} from '@loaders.gl/core';
-// eslint-disable-next-line import/no-unresolved
-import {DracoLoader} from '@loaders.gl/draco';
 import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
+import {registerLoaders} from '@loaders.gl/core';
+import {DracoLoader} from '@loaders.gl/draco';
+
 import GL from '@luma.gl/constants';
 import {AnimationLoop, setParameters, clear, log, lumaStats} from '@luma.gl/core';
 import {
-  GLTFScenegraphLoader,
-  createGLTFObjects,
-  GLTFEnvironment,
+  loadGLTFScenegraph,
+  IBLEnvironment,
   Timeline,
   VRDisplay
 } from '@luma.gl/addons';
@@ -162,17 +161,7 @@ const DEFAULT_OPTIONS = {
   lights: false
 };
 
-async function loadGLTF(urlOrPromise, gl, options) {
-  const data = typeof urlOrPromise === 'string' ? window.fetch(urlOrPromise) : urlOrPromise;
-  const {gltf, scenes, animator} = await parse(data, GLTFScenegraphLoader, {
-    ...options,
-    gl,
-    DracoLoader
-  });
-
-  scenes[0].traverse((node, {worldMatrix}) => log.info(4, 'Using model: ', node)());
-  return {scenes, animator, gltf};
-}
+registerLoaders([DracoLoader]);
 
 export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
@@ -288,17 +277,13 @@ export default class AppAnimationLoop extends AnimationLoop {
       e.preventDefault();
     });
 
-    canvas.addEventListener('drop', e => {
+    canvas.addEventListener('drop', async e => {
       e.preventDefault();
       if (e.dataTransfer.files && e.dataTransfer.files.length === 1) {
+        const file = e.dataTransfer.files[0];
+        const result = await loadGLTFScenegraph(file, {gl: this.gl, ...this.loadOptions});
         this._deleteScenes();
-        const readPromise = new Promise(resolve => {
-          const reader = new window.FileReader();
-          reader.onload = ev => resolve(ev.target.result);
-          reader.readAsArrayBuffer(e.dataTransfer.files[0]);
-        });
-
-        loadGLTF(readPromise, this.gl, this.loadOptions).then(result => this._fileLoaded(result));
+        this.fileLoaded(result);
       }
     });
   }
@@ -316,14 +301,14 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
   }
 
-  onInitialize({gl, canvas}) {
+  async onInitialize({gl, canvas}) {
     setParameters(gl, {
       depthTest: true,
       blend: false
     });
 
     this.loadOptions = DEFAULT_OPTIONS;
-    this.environment = new GLTFEnvironment(gl, {
+    this.environment = new IBLEnvironment(gl, {
       brdfLutUrl: `${GLTF_BASE_URL}/brdfLUT.png`,
       getTexUrl: (type, dir, mipLevel) =>
         `${GLTF_BASE_URL}/papermill/${type}/${type}_${CUBE_FACE_TO_DIRECTION[dir]}_${mipLevel}.jpg`
@@ -338,12 +323,12 @@ export default class AppAnimationLoop extends AnimationLoop {
         imageBasedLightingEnvironment: null,
         lights: true
       };
-      loadGLTF(this.modelFile, this.gl, options).then(result => this._fileLoaded(result));
+      const result = await loadGLTFScenegraph(this.modelFile, {gl: this.gl, options});
+      this.fileLoaded(result);
     } else {
-      const modelUrl = GLTF_DEFAULT_MODEL;
-      loadGLTF(GLTF_BASE_URL + modelUrl, this.gl, this.loadOptions).then(result =>
-        this._fileLoaded(result)
-      );
+      const modelUrl = GLTF_BASE_URL + GLTF_DEFAULT_MODEL;
+      const result = await loadGLTFScenegraph(modelUrl, {gl: this.gl, ...this.loadOptions});
+      this._fileLoaded(result)
     }
 
     const showSelector = document.getElementById('showSelector');
