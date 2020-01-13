@@ -124,21 +124,36 @@ export function getPolygonTexture(gl) {
 
   const polyData = polyTextureTransform.getData();
 
-  console.log(`Logging polygon texture data: totalCount: ${polyData.length/4}`);
+  // console.log(`Logging polygon texture data: totalCount: ${polyData.length/4}`);
+  // let nonZeroCount = 0;
+  // for (let i=0; i< polyData.length; i+=4) {
+  //   if (polyData[i] || polyData[i + 1] || polyData[i + 2]) {
+  //     nonZeroCount++;
+  //     console.log(polyData[i], polyData[i+1], polyData[i+2]);
+  //   }
+  // }
+  // console.log(`Non zero count: ${nonZeroCount}`);
+
+
+  return {
+    polyPosBuffer: triangleBuffer,
+    texture: polygonTexture,
+    data: polyData,
+    transform: polyTextureTransform,
+    boundingBox,
+    size
+  };
+}
+
+export function dumpNonZeroValues(array, size = 4, title = 'Logging array content') {
+  console.log(`Logging polygon texture data: totalCount: ${array.length/size}`);
   let nonZeroCount = 0;
-  for (let i=0; i< polyData.length; i+=4) {
-    if (polyData[i] || polyData[i + 1] || polyData[i + 2]) {
+  for (let i=0; i< array.length; i+=size) {
+    if (array[i] || (size < 2 ? true: array[i + 1]) || (size < 3 ? true: array[i + 2])) {
       nonZeroCount++;
-      console.log(polyData[i], polyData[i+1], polyData[i+2]);
+      console.log(array[i], array[i+1], array[i+2]);
     }
   }
   console.log(`Non zero count: ${nonZeroCount}`);
 
-
-  return {
-    // polyPosBuffer: triangleBuffer,
-    texture: polygonTexture,
-    // data: polyData,
-    // transform: polyTextureTransform
-  };
 }

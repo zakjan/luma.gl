@@ -6,7 +6,7 @@ import {AnimationLoop, Model, Transform} from '@luma.gl/engine';
 import {cssToDevicePixels, isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
 import {getRandom} from '../../utils';
-import {getPolygonTexture} from './utils';
+import {getPolygonTexture, dumpNonZeroValues} from './utils';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
 
@@ -24,6 +24,43 @@ const DRAW_VS = `\
 precision highp float;
 precision highp int;
 attribute vec2 a_position;
+attribute vec2 a_filterValueIndex;
+varying vec4 color;
+void main()
+{
+
+    gl_Position = vec4(a_position, 0.0, 1.0);
+    // color = a_filterValueIndex.x > 0. ? vec4(0, 1., 0, 1.) : vec4(1., 0, 0, 1.);
+    if (a_filterValueIndex.x == 0.) {
+      color = vec4(1., 0, 0, 1.);
+    } else if (a_filterValueIndex.x == 0.5){
+      color = vec4(1., 1., 0, 1.);
+    } else if (a_filterValueIndex.x == 1.){
+      color = vec4(0., 1., 0, 1.);
+    } else {
+      color = vec4(1., 1., 1., 1.);
+    }
+
+    gl_PointSize = 25.;
+}
+`;
+
+const DRAW_FS = `\
+#define ALPHA 0.9
+precision highp float;
+precision highp int;
+varying vec4 color;
+void main()
+{
+    // gl_FragColor = vec4(vec3(1.0, 0., 1.) * ALPHA, ALPHA);
+    gl_FragColor = color;
+}
+`;
+
+const POLY_VS = `\
+precision highp float;
+precision highp int;
+attribute vec2 a_position;
 void main()
 {
 
@@ -32,13 +69,39 @@ void main()
 }
 `;
 
-const DRAW_FS = `\
+const POLY_FS = `\
 #define ALPHA 0.9
 precision highp float;
 precision highp int;
 void main()
 {
     gl_FragColor = vec4(vec3(1.0, 0., 1.) * ALPHA, ALPHA);
+}
+`;
+
+const FILTER_VS = `\
+#version 300 es
+uniform vec4 boundingBox; //[xMin, xMax, yMin, yMax]
+uniform vec2 size; // [width, height]
+uniform sampler2D filterTexture;
+in vec2 a_position;
+out vec2 filterValueIndex; //[x: 0 (outside polygon)/1 (inside), y: index]
+void main()
+{
+    // [0, 0] -> [width, height]
+    vec2 pos = a_position - boundingBox.xy;
+    pos = pos / size;
+    pos = pos * 2.0 - vec2(1.0);
+    if (pos.x < -1. || pos.x > 1. || pos.y < -1. || pos.y > 1.) {
+      filterValueIndex.x = 0.;
+    } else {
+      float filterFlag = texture(filterTexture, pos.xy).r;
+      filterValueIndex.x =  filterFlag > 0. ? 1. : 0.5;
+    }
+    filterValueIndex.y = float(gl_VertexID); // transform_elementID;
+
+    // HACK
+    // gl_Position = vec4(0., 0., 0., 1.);
 }
 `;
 
@@ -83,6 +146,9 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const positionBuffer = new Buffer(gl, positions);
 
+    // buffer to hold filtered data
+    const filterValueIndexBuffer = new Buffer(gl, NUM_INSTANCES * 2 * 4); //vec2 buffer
+
     const pointsModel = new Model(gl, {
       id: 'RenderPoints',
       vs: DRAW_VS,
@@ -90,19 +156,20 @@ export default class AppAnimationLoop extends AnimationLoop {
       drawMode: gl.POINTS,
       vertexCount: NUM_INSTANCES,
       attributes: {
-        a_position: positionBuffer
+        a_position: positionBuffer,
+        a_filterValueIndex: filterValueIndexBuffer
       },
       debug: true
     });
 
-    const {polyPosBuffer} = getPolygonTexture(gl);
+    const {polyPosBuffer, texture, boundingBox, size} = getPolygonTexture(gl);
 
 
     const polygonModel = new Model(gl, {
       id: 'RenderTriangles',
-      vs: DRAW_VS,
-      fs: DRAW_FS,
-      drawMode: gl.TRIANGLES,
+      vs: POLY_VS,
+      fs: POLY_FS,
+      drawMode: GL.LINE_STRIP, // GL.LINE_LOOP, // gl.TRIANGLES,
       vertexCount: 6,
       attributes: {
         a_position: polyPosBuffer
@@ -111,18 +178,29 @@ export default class AppAnimationLoop extends AnimationLoop {
     });
 
 
-    // const transform = new Transform(gl, {
-    //   vs: EMIT_VS,
-    //   elementCount: NUM_INSTANCES,
-    //   sourceBuffers: {
-    //     a_offset: offsetBuffer,
-    //     a_rotation: rotationBuffer
-    //   },
-    //   feedbackMap: {
-    //     a_offset: 'v_offset',
-    //     a_rotation: 'v_rotation'
-    //   }
-    // });
+    const filterTransform = new Transform(gl, {
+      id: 'filter transform',
+      vs: FILTER_VS,
+      elementCount: NUM_INSTANCES,
+      uniforms: {
+        filterTexture: texture,
+        boundingBox,
+        size
+      },
+      sourceBuffers: {
+        a_position: positionBuffer
+      },
+      feedbackBuffers: {
+        filterValueIndex: filterValueIndexBuffer
+      },
+      varyings: ['filterValueIndex'],
+      debug: true
+      // TODO provide feedback buffer and varyings instead of feedbackMap
+    });
+
+    filterTransform.run();
+    const data = filterTransform.getData({varyingName: 'filterValueIndex'});
+    dumpNonZeroValues(data, 2, 'Filtered Data');
 
     const pickingFramebuffer = new Framebuffer(gl, {width, height});
 
@@ -130,7 +208,8 @@ export default class AppAnimationLoop extends AnimationLoop {
       positionBuffer,
       pointsModel,
       polygonModel,
-      pickingFramebuffer
+      pickingFramebuffer,
+      filterTransform
     };
   }
   /* eslint-enable max-statements */
