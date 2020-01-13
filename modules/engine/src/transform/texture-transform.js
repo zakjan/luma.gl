@@ -47,9 +47,9 @@ export default class TextureTransform {
   }
 
   getDrawOptions(opts = {}) {
-    const {sourceTextures, framebuffer, targetTexture} = this.bindings[this.currentIndex];
+    const {sourceTextures, framebuffer, targetTexture, sourceBuffers} = this.bindings[this.currentIndex];
 
-    const attributes = Object.assign({}, opts.attributes);
+    const attributes = Object.assign({}, sourceBuffers, opts.attributes);
     const uniforms = Object.assign({}, opts.uniforms);
     const parameters = Object.assign({}, opts.parameters);
     let discard = opts.discard;
@@ -138,10 +138,10 @@ export default class TextureTransform {
   // Private
 
   _initialize(props = {}) {
-    const {_targetTextureVarying, _swapTexture} = props;
+    const {_targetTextureVarying, _swapTexture, _targetTexture} = props;
     this._swapTexture = _swapTexture;
     this.targetTextureVarying = _targetTextureVarying;
-    this.hasTargetTexture = _targetTextureVarying;
+    this.hasTargetTexture = _targetTextureVarying || _targetTexture;
     this._setupTextures(props);
   }
 
@@ -165,14 +165,14 @@ export default class TextureTransform {
   }
 
   _setupTextures(props = {}) {
-    const {_sourceTextures = {}, _targetTexture} = props;
+    const {_sourceTextures = {}, _targetTexture, sourceBuffers} = props;
     const targetTexture = this._createTargetTexture({
       sourceTextures: _sourceTextures,
       textureOrReference: _targetTexture
     });
     this.hasSourceTextures =
       this.hasSourceTextures || (_sourceTextures && Object.keys(_sourceTextures).length > 0);
-    this._updateBindings({sourceTextures: _sourceTextures, targetTexture});
+    this._updateBindings({sourceTextures: _sourceTextures, targetTexture, sourceBuffers});
     if ('elementCount' in props) {
       this._updateElementIDBuffer(props.elementCount);
     }
@@ -211,14 +211,16 @@ export default class TextureTransform {
   }
 
   _updateBinding(binding, opts) {
-    const {sourceTextures, targetTexture} = opts;
+    const {sourceTextures, targetTexture, sourceBuffers} = opts;
     if (!binding) {
       binding = {
+        sourceBuffers: {},
         sourceTextures: {},
         targetTexture: null
       };
     }
     Object.assign(binding.sourceTextures, sourceTextures);
+    Object.assign(binding.sourceBuffers, sourceBuffers);
     if (targetTexture) {
       binding.targetTexture = targetTexture;
 
@@ -297,7 +299,7 @@ export default class TextureTransform {
   // build and return shader releated parameters
   _processVertexShader(props = {}) {
     const {sourceTextures, targetTexture} = this.bindings[this.currentIndex];
-    const {vs, uniforms, targetTextureType, inject, samplerTextureMap} = updateForTextures({
+    const {vs, targetTextureType, inject, samplerTextureMap} = updateForTextures({
       vs: props.vs,
       sourceTextureMap: sourceTextures,
       targetTextureVarying: this.targetTextureVarying,
@@ -307,7 +309,7 @@ export default class TextureTransform {
     this.targetTextureType = targetTextureType;
     this.samplerTextureMap = samplerTextureMap;
     const fs =
-      props._fs ||
+      props.fs ||
       getPassthroughFS({
         version: getShaderVersion(vs),
         input: this.targetTextureVarying,
@@ -318,6 +320,6 @@ export default class TextureTransform {
       this.hasSourceTextures || this.targetTextureVarying
         ? [transformModule].concat(props.modules || [])
         : props.modules;
-    return {vs, fs, modules, uniforms, inject: combinedInject};
+    return {vs, fs, modules, inject: combinedInject};
   }
 }

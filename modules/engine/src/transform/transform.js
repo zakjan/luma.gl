@@ -67,6 +67,10 @@ export default class Transform {
     return this.bufferTransform && this.bufferTransform.getBuffer(varyingName);
   }
 
+  getTargetTexture() {
+    return this.textureTransform && this.textureTransform.getTargetTexture();
+  }
+
   // Return data either from Buffer or from Texture
   getData(opts = {}) {
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
@@ -153,7 +157,6 @@ export default class Transform {
 
 function canCreateBufferTransform(props) {
   if (
-    !isObjectEmpty(props.sourceBuffers) ||
     !isObjectEmpty(props.feedbackBuffers) ||
     (props.varyings && props.varyings.length > 0)
   ) {

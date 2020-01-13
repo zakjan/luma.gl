@@ -1,10 +1,12 @@
 /* global window */
-import {Buffer, readPixelsToArray, Framebuffer} from '@luma.gl/webgl';
+import GL from '@luma.gl/constants';
+import {Buffer, readPixelsToArray, Framebuffer, clear, Texture2D} from '@luma.gl/webgl';
 import {picking} from '@luma.gl/shadertools';
 import {AnimationLoop, Model, Transform} from '@luma.gl/engine';
 import {cssToDevicePixels, isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
 import {getRandom} from '../../utils';
+import {getPolygonTexture} from './utils';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
 
@@ -19,14 +21,9 @@ const INFO_HTML = `
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
 const DRAW_VS = `\
-#version 300 es
-#define OFFSET_LOCATION 0
-#define ROTATION_LOCATION 1
-#define POSITION_LOCATION 2
-#define COLOR_LOCATION 3
 precision highp float;
 precision highp int;
-layout(location = POSITION_LOCATION) in vec2 a_position;
+attribute vec2 a_position;
 void main()
 {
 
@@ -36,15 +33,12 @@ void main()
 `;
 
 const DRAW_FS = `\
-#version 300 es
 #define ALPHA 0.9
 precision highp float;
 precision highp int;
-out vec4 color;
 void main()
 {
-    color = vec4(vec3(1.0, 0., 1.) * ALPHA, ALPHA);
-    // color = picking_filterColor(color);
+    gl_FragColor = vec4(vec3(1.0, 0., 1.) * ALPHA, ALPHA);
 }
 `;
 
@@ -80,40 +74,17 @@ export default class AppAnimationLoop extends AnimationLoop {
     gl.canvas.addEventListener('mouseleave', mouseleave);
 
     // -- Initialize data
-    const trianglePositions = new Float32Array([0.015, 0.0, -0.01, 0.01, -0.01, -0.01]);
-
-    const instanceOffsets = new Float32Array(NUM_INSTANCES * 2);
-    const instanceRotations = new Float32Array(NUM_INSTANCES);
-    const instanceColors = new Float32Array(NUM_INSTANCES * 3);
-    const pickingColors = new Uint8ClampedArray(NUM_INSTANCES * 2);
+    const positions = new Float32Array(NUM_INSTANCES * 2);
 
     for (let i = 0; i < NUM_INSTANCES; ++i) {
-      instanceOffsets[i * 2] = random() * 2.0 - 1.0;
-      instanceOffsets[i * 2 + 1] = random() * 2.0 - 1.0;
-
-      instanceRotations[i] = random() * 2 * Math.PI;
-
-      const randValue = random();
-      if (randValue > 0.5) {
-        instanceColors[i * 3 + 1] = 1.0;
-        instanceColors[i * 3 + 2] = 1.0;
-      } else {
-        instanceColors[i * 3] = 1.0;
-        instanceColors[i * 3 + 2] = 1.0;
-      }
-
-      pickingColors[i * 2] = Math.floor(i / 255);
-      pickingColors[i * 2 + 1] = i - 255 * pickingColors[i * 2];
+      positions[i * 2] = random() * 2.0 - 1.0;
+      positions[i * 2 + 1] = random() * 2.0 - 1.0;
     }
 
-    const positionBuffer = new Buffer(gl, instanceOffsets);
-    const colorBuffer = new Buffer(gl, instanceColors);
-    const offsetBuffer = new Buffer(gl, instanceOffsets);
-    const rotationBuffer = new Buffer(gl, instanceRotations);
-    const pickingColorBuffer = new Buffer(gl, pickingColors);
+    const positionBuffer = new Buffer(gl, positions);
 
-    const renderModel = new Model(gl, {
-      id: 'RenderModel',
+    const pointsModel = new Model(gl, {
+      id: 'RenderPoints',
       vs: DRAW_VS,
       fs: DRAW_FS,
       drawMode: gl.POINTS,
@@ -123,6 +94,22 @@ export default class AppAnimationLoop extends AnimationLoop {
       },
       debug: true
     });
+
+    const {polyPosBuffer} = getPolygonTexture(gl);
+
+
+    const polygonModel = new Model(gl, {
+      id: 'RenderTriangles',
+      vs: DRAW_VS,
+      fs: DRAW_FS,
+      drawMode: gl.TRIANGLES,
+      vertexCount: 6,
+      attributes: {
+        a_position: polyPosBuffer
+      },
+      debug: true
+    });
+
 
     // const transform = new Transform(gl, {
     //   vs: EMIT_VS,
@@ -141,10 +128,8 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     return {
       positionBuffer,
-      rotationBuffer,
-      colorBuffer,
-      offsetBuffer,
-      renderModel,
+      pointsModel,
+      polygonModel,
       pickingFramebuffer
     };
   }
@@ -154,9 +139,9 @@ export default class AppAnimationLoop extends AnimationLoop {
     gl,
     width,
     height,
-    renderModel,
+    pointsModel,
+    polygonModel,
     positionBuffer,
-    colorBuffer,
     // transform,
     useDevicePixels,
     time,
@@ -165,8 +150,11 @@ export default class AppAnimationLoop extends AnimationLoop {
     if (this.demoNotSupported) {
       return;
     }
-    renderModel.clear({color: [0.0, 0.0, 0.0, 1.0], depth: true});
-    renderModel.draw();
+    clear(gl, {color: [0, 0, 0, 1]});
+    // pointsModel.clear({color: [0.0, 0.0, 0.0, 1.0], depth: true});
+    pointsModel.draw();
+    // polygonModel.clear({color: [0.0, 0.0, 0.0, 1.0], depth: true});
+    polygonModel.draw();
 
     // offsetBuffer.setAccessor({divisor: 0});
     // rotationBuffer.setAccessor({divisor: 0});
@@ -183,9 +171,12 @@ export default class AppAnimationLoop extends AnimationLoop {
     // }
   }
 
-  onFinalize({renderModel, transform}) {
-    if (renderModel) {
-      renderModel.delete();
+  onFinalize({pointsModel, transform, polygonModel}) {
+    if (pointsModel) {
+      pointsModel.delete();
+    }
+    if (polygonModel) {
+      polygonModel.delete();
     }
     if (transform) {
       transform.delete();
