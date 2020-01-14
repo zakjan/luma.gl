@@ -54,17 +54,19 @@ export function getPolygonTexture(gl) {
   const triangles =  new Float32Array([
     -0.5, -0.5,  0, 0, -0.5, 0.5,
     0.5, -0.5,  0, 0,  0.5, 0.5
-
-    // offset y by 0.5
-    // -0.5, 0,  0, 0.5, -0.5, 1.0,
-    // 0.5, 0,  0, 0.5,  0.5, 1.0
-
-    // offset x by 0.25
-    // -0.25, 0,  0.25, 0.5, -0.25, 1.0,
-    // 0.75, 0,  0.25, 0.5,  0.75, 1.0
-
   ]);
+  const triangles_wireframe_buffer = new Buffer(gl, new Float32Array([
+    -0.5, -0.5,  0, 0,
+    0, 0, -0.5, 0.5,
+    -0.5, 0.5, -0.5, -0.5,
+
+    0.5, -0.5,  0, 0,
+    0, 0,  0.5, 0.5,
+    0.5, 0.5, 0.5, -0.5
+  ]));
+
   const triangleBuffer = new Buffer(gl, triangles);
+
   const boundingBox = getBoundingBox(triangles, 6);
   const size = [boundingBox[2] - boundingBox[0], boundingBox[3] - boundingBox[1]];
   const whRatio = size[0] / size[1];
@@ -146,6 +148,7 @@ export function getPolygonTexture(gl) {
 
   return {
     polyPosBuffer: triangleBuffer,
+    polyWireFrameBuffer: triangles_wireframe_buffer,
     texture: polygonTexture,
     data: polyData,
     transform: polyTextureTransform,

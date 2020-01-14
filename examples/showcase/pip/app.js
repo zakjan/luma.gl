@@ -30,18 +30,9 @@ void main()
 {
 
     gl_Position = vec4(a_position, 0.0, 1.0);
-    // color = a_filterValueIndex.x > 0. ? vec4(0, 1., 0, 1.) : vec4(1., 0, 0, 1.);
-    if (a_filterValueIndex.x == 0.) {
-      color = vec4(1., 0, 0, 1.);
-    } else if (a_filterValueIndex.x == 0.5){
-      color = vec4(1., 1., 0, 1.);
-    } else if (a_filterValueIndex.x == 1.){
-      color = vec4(0., 1., 0, 1.);
-    } else {
-      color = vec4(1., 1., 1., 1.);
-    }
+    color = a_filterValueIndex.x > 0. ? vec4(0, 1., 0, 1.) : vec4(1., 0, 0, 1.);
 
-    gl_PointSize = 25.;
+    gl_PointSize = 10.;
 }
 `;
 
@@ -52,7 +43,6 @@ precision highp int;
 varying vec4 color;
 void main()
 {
-    // gl_FragColor = vec4(vec3(1.0, 0., 1.) * ALPHA, ALPHA);
     gl_FragColor = color;
 }
 `;
@@ -85,47 +75,22 @@ uniform vec4 boundingBox; //[xMin, xMax, yMin, yMax]
 uniform vec2 size; // [width, height]
 uniform sampler2D filterTexture;
 in vec2 a_position;
-out vec2 filterValueIndex; //[x: 0 (outside polygon)/1 (inside), y: index]
+out vec2 filterValueIndex; //[x: 0 (outside polygon)/1 (inside), y: position index]
 void main()
 {
     // [0, 0] -> [width, height]
     vec2 pos = a_position - boundingBox.xy;
     pos = pos / size;
     pos = pos * 2.0 - vec2(1.0);
-    filterValueIndex.y = float(gl_VertexID); // transform_elementID;
+    filterValueIndex.y = float(gl_VertexID);
     if (pos.x < -1. || pos.x > 1. || pos.y < -1. || pos.y > 1.) {
       filterValueIndex.x = 0.;
     } else {
       vec2 texCord = (pos.xy + vec2 (1.)) / 2.;  // TODO: fixed order of operations
-      // texCord = texCord + vec2 (0.0009765625); // 1 /(2 * texSize)
-      // texCord.y = 1.0 - texCord.y;
       float filterFlag = texture(filterTexture, texCord.xy).r;
 
-      filterValueIndex.x =  filterFlag > 0. ? 1. : 0.5;
-      // filterValueIndex.x =  filterFlag == 255. ? 1. : 0.5;
-      // HACK
-      filterValueIndex.y = filterFlag;
+      filterValueIndex.x =  filterFlag > 0. ? 1. : 0.;
     }
-
-    // verify postion values
-    // filterValueIndex = a_position;  => all good
-
-    // filterValueIndex = size;  => (1, 1) good
-
-    // filterValueIndex = boundingBox.xy;  => -0.5, -0.5 => good
-
-    // filterValueIndex = a_position - boundingBox.xy; => in 0 to 1 range good
-
-    // filterValueIndex = a_position - boundingBox.xy;
-    // filterValueIndex =  filterValueIndex / size; => 0 to 1 range good
-
-    // filterValueIndex = a_position - boundingBox.xy;
-    // filterValueIndex =  filterValueIndex / size;
-    // filterValueIndex = filterValueIndex * 2.0 - vec2(1.0);
-
-
-    // HACK
-    // gl_Position = vec4(0., 0., 0., 1.);
 }
 `;
 
@@ -134,17 +99,6 @@ const random = getRandom();
 const NUM_INSTANCES = 1000; // 6; // 1000;  // TODO less than 6 doesn't render polygon
 const log = new Log({id: 'transform'}).enable();
 
-// TODO PIKCING TEMPORARILY DISABLED
-let pickPosition = [0, 0];
-
-function mousemove(e) {
-  pickPosition = [e.offsetX, e.offsetY];
-}
-
-function mouseleave(e) {
-  pickPosition = null;
-}
-
 function getPositionData() {
   const positions = new Float32Array(NUM_INSTANCES * 2);
   for (let i = 0; i < NUM_INSTANCES; ++i) {
@@ -152,19 +106,8 @@ function getPositionData() {
     positions[i * 2 + 1] = random() * 2.0 - 1.0;
   }
   return positions;
-
-  // return new Float32Array([
-  //   // origin bottom left
-  //   0, 0,
-  //   -0.45, -0.15, // left
-  //   -0.25, 0.5, // left top
-  //
-  //   0.15, -0.22, // mid bottom
-  //
-  //   0.4, 0.24, // right top
-  //   0.4, -0.14, // right bottom
-  // ]);
 }
+
 export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
@@ -177,8 +120,6 @@ export default class AppAnimationLoop extends AnimationLoop {
       log.error(ALT_TEXT)();
       return {};
     }
-    gl.canvas.addEventListener('mousemove', mousemove);
-    gl.canvas.addEventListener('mouseleave', mouseleave);
 
     // -- Initialize data
     const positions = getPositionData();
@@ -201,17 +142,29 @@ export default class AppAnimationLoop extends AnimationLoop {
       debug: true
     });
 
-    const {polyPosBuffer, texture, boundingBox, size} = getPolygonTexture(gl);
+    const {polyPosBuffer, texture, boundingBox, size, polyWireFrameBuffer} = getPolygonTexture(gl);
 
 
     const polygonModel = new Model(gl, {
       id: 'RenderTriangles',
       vs: POLY_VS,
       fs: POLY_FS,
-      drawMode: GL.LINE_STRIP, // GL.LINE_LOOP, // gl.TRIANGLES,
+      drawMode: gl.TRIANGLES,
       vertexCount: 6,
       attributes: {
         a_position: polyPosBuffer
+      },
+      debug: true
+    });
+
+    const polygonWireFrameModel = new Model(gl, {
+      id: 'RenderTriangles',
+      vs: POLY_VS,
+      fs: POLY_FS,
+      drawMode: gl.LINES,
+      vertexCount: 12,
+      attributes: {
+        a_position: polyWireFrameBuffer
       },
       debug: true
     });
@@ -237,16 +190,13 @@ export default class AppAnimationLoop extends AnimationLoop {
       // TODO provide feedback buffer and varyings instead of feedbackMap
     });
 
-    filterTransform.run();
-    const data = filterTransform.getData({varyingName: 'filterValueIndex'});
-    dumpNonZeroValues(data, 2, 'Filtered Data');
-
     const pickingFramebuffer = new Framebuffer(gl, {width, height});
 
     return {
       positionBuffer,
       pointsModel,
       polygonModel,
+      polygonWireFrameModel,
       pickingFramebuffer,
       filterTransform
     };
@@ -258,35 +208,28 @@ export default class AppAnimationLoop extends AnimationLoop {
     width,
     height,
     pointsModel,
-    polygonModel,
+    polygonWireFrameModel,
     positionBuffer,
     // transform,
     useDevicePixels,
     time,
-    pickingFramebuffer
+    pickingFramebuffer,
+    filterTransform
   }) {
     if (this.demoNotSupported) {
       return;
     }
     clear(gl, {color: [0, 0, 0, 1]});
-    // pointsModel.clear({color: [0.0, 0.0, 0.0, 1.0], depth: true});
+
+    filterTransform.run();
+    // const data = filterTransform.getData({varyingName: 'filterValueIndex'});
+    // dumpNonZeroValues(data, 2, 'Filtered Data');
+
+
     pointsModel.draw();
-    // polygonModel.clear({color: [0.0, 0.0, 0.0, 1.0], depth: true});
-    polygonModel.draw();
 
-    // offsetBuffer.setAccessor({divisor: 0});
-    // rotationBuffer.setAccessor({divisor: 0});
+    polygonWireFrameModel.draw();
 
-    // if (pickPosition) {
-    //   // use the center pixel location in device pixel range
-    //   const devicePixels = cssToDevicePixels(gl, pickPosition);
-    //   const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
-    //   const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
-    //
-    //   pickingFramebuffer.resize({width, height});
-    //
-    //   pickInstance(gl, deviceX, deviceY, renderModel, pickingFramebuffer);
-    // }
   }
 
   onFinalize({pointsModel, transform, polygonModel}) {
@@ -303,35 +246,6 @@ export default class AppAnimationLoop extends AnimationLoop {
 
   getAltText() {
     return ALT_TEXT;
-  }
-}
-
-function pickInstance(gl, pickX, pickY, model, framebuffer) {
-  framebuffer.clear({color: true, depth: true});
-  // Render picking colors
-  /* eslint-disable camelcase */
-  model.setUniforms({picking_uActive: 1});
-  model.draw({framebuffer});
-  model.setUniforms({picking_uActive: 0});
-
-  const color = readPixelsToArray(framebuffer, {
-    sourceX: pickX,
-    sourceY: pickY,
-    sourceWidth: 1,
-    sourceHeight: 1,
-    sourceFormat: gl.RGBA,
-    sourceType: gl.UNSIGNED_BYTE
-  });
-
-  if (color[0] + color[1] + color[2] > 0) {
-    model.updateModuleSettings({
-      pickingSelectedColor: color,
-      pickingHighlightColor: RED
-    });
-  } else {
-    model.updateModuleSettings({
-      pickingSelectedColor: null
-    });
   }
 }
 
