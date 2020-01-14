@@ -62,22 +62,25 @@ const TRIANGLES = [
 export class PolygonFilter {
   constructor(gl, {triangles = TRIANGLES} = {}) {
     this.triangles = triangles.slice();
+    this.gl = gl;
     this.update();
   }
 
-  update() {
-    const {triangles} = this;
+  update(offsetX, offsetY) {
+    const {gl, triangles} = this;
     const triangleVertices = [];
     const triangleWireFrameVertices = [];
     const triangleCount = triangles.length
     for (let i=0; i< triangleCount; i++) {
-      const xOffset = 0; // random() * 0.001 * (random() > 0.5 ? 1 : -1);
-      const yOffest = 0; // random() * 0.001 * (random() > 0.5 ? 1 : -1);
-      const triangle = triangles[i];
+      const xOffset = offsetX || random() * 0.003 * (random() > 0.5 ? 1 : -1);
+      const yOffset = offsetY || random() * 0.001 * (random() > 0.5 ? 1 : -1);
+      const triangle = triangles[i]; //.slice();
       for (let j=0; j<3; j++) {
         triangle[j*2] += xOffset;
         triangle[j*2+1] += yOffset;
       }
+      console.log(`xOffset: ${xOffset} yOffset: ${yOffset}`);
+      console.log(`Triangel#${i+1}: ${triangle}`);
       triangleVertices.push(...triangle);
       triangleWireFrameVertices.push(
         triangle[0], triangle[1], triangle[2], triangle[3],
@@ -91,10 +94,12 @@ export class PolygonFilter {
     }
     this.triangleBuffer = new Buffer(gl, new Float32Array(triangleVertices));
     this.triangleWFBuffer = new Buffer(gl, new Float32Array(triangleWireFrameVertices));
-    const boundingBox = getBoundingBox(triangles, triangleCount * 2);
+    const boundingBox = getBoundingBox(triangleVertices, triangleCount * 3);
     const size = [boundingBox[2] - boundingBox[0], boundingBox[3] - boundingBox[1]];
     this.boundingBox = boundingBox;
     this.size = size;
+    console.log(`boundingBox: ${boundingBox}`);
+    console.log(`size: ${size}`);
 
     const whRatio = size[0] / size[1];
 
@@ -137,40 +142,36 @@ export class PolygonFilter {
     if (!this.polyTextureTransform) {
       this.polyTextureTransform = new Transform(gl, {
         id: `polygon-texture-creation-transform`,
-        elementCount: triangleCount * 2,
-        _targetTexture: polygonTexture,
+        elementCount: triangleCount * 3,
+        _targetTexture: this.polygonTexture,
         vs: POLY_TEX_VS,
         fs: POLY_TEX_FS,
         sourceBuffers: {
-          a_position: triangleBuffer
-        },
-        uniforms: {
-          boundingBox,
-          size
+          a_position: this.triangleBuffer
         },
         drawMode: GL.TRIANGLES,
         debug: true
       });
     } else {
       this.polyTextureTransform.update({
-        elementCount: triangleCount * 2,
-        _targetTexture: polygonTexture,
+        elementCount: triangleCount * 3,
+        _targetTexture: this.polygonTexture,
         sourceBuffers: {
-          a_position: triangleBuffer
+          a_position: this.triangleBuffer
         },
-        uniforms: {
-          boundingBox,
-          size
-        }
       });
     }
     this.polyTextureTransform.run({
       clearRenderTarget: true,
       parameters: {
         depthTest: false
-      }
+      },
+      uniforms: {
+        boundingBox,
+        size
+      },
     });
-    const polyData = polyTextureTransform.getData();
+    const polyData = this.polyTextureTransform.getData();
 
     return {
       polyPosBuffer: this.triangleBuffer,

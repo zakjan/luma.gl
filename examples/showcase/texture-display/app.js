@@ -5,7 +5,7 @@
 import {AnimationLoop, Model, Texture2D, Buffer, setParameters, Transform} from '@luma.gl/core';
 // import {_getHistoPyramid as getHistoPyramid} from '@luma.gl/gpgpu';
 import GL from '@luma.gl/constants';
-import {getPolygonTexture} from '../pip/utils';
+import {getPolygonTexture, PolygonFilter} from '../pip/utils';
 
 const INFO_HTML = `
 Example to display a texture
@@ -268,7 +268,13 @@ const animationLoop = new AnimationLoop({
     });
 
     // const texture = getTextureToDisplay(gl);
-    const {texture} = getPolygonTexture(gl);
+    // const {texture} = getPolygonTexture(gl);
+    const pf = new PolygonFilter(gl);
+    for (let i=0; i<100; i++) {
+      pf.update();
+    }
+    const {texture} = pf.update();
+
     const texWidth = texture.width;
     const texHeight = texture.height;
 

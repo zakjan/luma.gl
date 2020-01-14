@@ -6,7 +6,7 @@ import {AnimationLoop, Model, Transform} from '@luma.gl/engine';
 import {cssToDevicePixels, isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
 import {getRandom} from '../../utils';
-import {getPolygonTexture, dumpNonZeroValues} from './utils';
+import {getPolygonTexture, dumpNonZeroValues, PolygonFilter} from './utils';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
 
@@ -81,13 +81,13 @@ void main()
     // [0, 0] -> [width, height]
     vec2 pos = a_position - boundingBox.xy;
     pos = pos / size;
-    pos = pos * 2.0 - vec2(1.0);
+    // pos = pos * 2.0 - vec2(1.0);
     filterValueIndex.y = float(gl_VertexID);
-    if (pos.x < -1. || pos.x > 1. || pos.y < -1. || pos.y > 1.) {
+    if (pos.x < 0. || pos.x > 1. || pos.y < 0. || pos.y > 1.) {
       filterValueIndex.x = 0.;
     } else {
-      vec2 texCord = (pos.xy + vec2 (1.)) / 2.;  // TODO: fixed order of operations
-      float filterFlag = texture(filterTexture, texCord.xy).r;
+      // vec2 texCord = (pos.xy + vec2 (1.)) / 2.;  // TODO: fixed order of operations
+      float filterFlag = texture(filterTexture, pos.xy).r;
 
       filterValueIndex.x =  filterFlag > 0. ? 1. : 0.;
     }
@@ -184,7 +184,8 @@ export default class AppAnimationLoop extends AnimationLoop {
       polygonModel,
       polygonWireFrameModel,
       pickingFramebuffer,
-      filterTransform
+      filterTransform,
+      polygonFilter: new PolygonFilter(gl)
     };
   }
   /* eslint-enable max-statements */
@@ -194,19 +195,26 @@ export default class AppAnimationLoop extends AnimationLoop {
     width,
     height,
     pointsModel,
+    polygonModel,
     polygonWireFrameModel,
     positionBuffer,
     // transform,
     useDevicePixels,
     time,
     pickingFramebuffer,
-    filterTransform
+    filterTransform,
+    polygonFilter
   }) {
     if (this.demoNotSupported) {
       return;
     }
 
-    const {polyPosBuffer, texture, boundingBox, size, polyWireFrameBuffer} = getPolygonTexture(gl);
+    // const {polyPosBuffer, texture, boundingBox, size, polyWireFrameBuffer} = getPolygonTexture(gl);
+    const useOffsets = false;
+    const offsetX = useOffsets ? -0.25 : 0;
+    const offsetY = useOffsets ? -0.25 : 0;
+    // const {polyPosBuffer, texture, boundingBox, size, polyWireFrameBuffer} = polygonFilter.update(offsetX, offsetY);
+    const {polyPosBuffer, texture, boundingBox, size, polyWireFrameBuffer} = polygonFilter.update();
 
     clear(gl, {color: [0, 0, 0, 1]});
 
