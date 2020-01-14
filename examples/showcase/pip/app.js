@@ -142,18 +142,12 @@ export default class AppAnimationLoop extends AnimationLoop {
       debug: true
     });
 
-    const {polyPosBuffer, texture, boundingBox, size, polyWireFrameBuffer} = getPolygonTexture(gl);
-
-
     const polygonModel = new Model(gl, {
       id: 'RenderTriangles',
       vs: POLY_VS,
       fs: POLY_FS,
       drawMode: gl.TRIANGLES,
       vertexCount: 6,
-      attributes: {
-        a_position: polyPosBuffer
-      },
       debug: true
     });
 
@@ -163,9 +157,6 @@ export default class AppAnimationLoop extends AnimationLoop {
       fs: POLY_FS,
       drawMode: gl.LINES,
       vertexCount: 12,
-      attributes: {
-        a_position: polyWireFrameBuffer
-      },
       debug: true
     });
 
@@ -174,11 +165,6 @@ export default class AppAnimationLoop extends AnimationLoop {
       id: 'filter transform',
       vs: FILTER_VS,
       elementCount: NUM_INSTANCES,
-      uniforms: {
-        filterTexture: texture,
-        boundingBox,
-        size
-      },
       sourceBuffers: {
         a_position: positionBuffer
       },
@@ -219,16 +205,36 @@ export default class AppAnimationLoop extends AnimationLoop {
     if (this.demoNotSupported) {
       return;
     }
+
+    const {polyPosBuffer, texture, boundingBox, size, polyWireFrameBuffer} = getPolygonTexture(gl);
+
     clear(gl, {color: [0, 0, 0, 1]});
 
-    filterTransform.run();
+    filterTransform.run({
+      uniforms: {
+        filterTexture: texture,
+        boundingBox,
+        size
+      },
+    });
     // const data = filterTransform.getData({varyingName: 'filterValueIndex'});
     // dumpNonZeroValues(data, 2, 'Filtered Data');
 
 
     pointsModel.draw();
 
-    polygonWireFrameModel.draw();
+    polygonWireFrameModel.draw({
+      attributes: {
+        a_position: polyWireFrameBuffer
+      }
+    });
+
+    // polygonModel.draw({
+    //   attributes: {
+    //     a_position: polyPosBuffer
+    //   }
+    // });
+
 
   }
 
