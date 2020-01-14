@@ -54,6 +54,15 @@ export function getPolygonTexture(gl) {
   const triangles =  new Float32Array([
     -0.5, -0.5,  0, 0, -0.5, 0.5,
     0.5, -0.5,  0, 0,  0.5, 0.5
+
+    // offset y by 0.5
+    // -0.5, 0,  0, 0.5, -0.5, 1.0,
+    // 0.5, 0,  0, 0.5,  0.5, 1.0
+
+    // offset x by 0.25
+    // -0.25, 0,  0.25, 0.5, -0.25, 1.0,
+    // 0.75, 0,  0.25, 0.5,  0.75, 1.0
+
   ]);
   const triangleBuffer = new Buffer(gl, triangles);
   const boundingBox = getBoundingBox(triangles, 6);
@@ -90,9 +99,9 @@ export function getPolygonTexture(gl) {
       [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
       [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
     },
-    pixelStore: {
-      [GL.UNPACK_FLIP_Y_WEBGL]: false
-    },
+    // pixelStore: {
+    //   [GL.UNPACK_FLIP_Y_WEBGL]: false
+    // },
     dataFormat: GL.RGBA,
     width: texWidth,
     height: texHeight
@@ -151,7 +160,7 @@ export function dumpNonZeroValues(array, size = 4, title = 'Logging array conten
   for (let i=0; i< array.length; i+=size) {
     if (array[i] || (size < 2 ? true: array[i + 1]) || (size < 3 ? true: array[i + 2])) {
       nonZeroCount++;
-      console.log(array[i], array[i+1], array[i+2]);
+      console.log(array[i], array[i+1]);
     }
   }
   console.log(`Non zero count: ${nonZeroCount}`);

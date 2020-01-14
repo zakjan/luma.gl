@@ -92,13 +92,37 @@ void main()
     vec2 pos = a_position - boundingBox.xy;
     pos = pos / size;
     pos = pos * 2.0 - vec2(1.0);
+    filterValueIndex.y = float(gl_VertexID); // transform_elementID;
     if (pos.x < -1. || pos.x > 1. || pos.y < -1. || pos.y > 1.) {
       filterValueIndex.x = 0.;
     } else {
-      float filterFlag = texture(filterTexture, pos.xy).r;
+      vec2 texCord = (pos.xy + vec2 (1.)) / 2.;  // TODO: fixed order of operations
+      // texCord = texCord + vec2 (0.0009765625); // 1 /(2 * texSize)
+      // texCord.y = 1.0 - texCord.y;
+      float filterFlag = texture(filterTexture, texCord.xy).r;
+
       filterValueIndex.x =  filterFlag > 0. ? 1. : 0.5;
+      // filterValueIndex.x =  filterFlag == 255. ? 1. : 0.5;
+      // HACK
+      filterValueIndex.y = filterFlag;
     }
-    filterValueIndex.y = float(gl_VertexID); // transform_elementID;
+
+    // verify postion values
+    // filterValueIndex = a_position;  => all good
+
+    // filterValueIndex = size;  => (1, 1) good
+
+    // filterValueIndex = boundingBox.xy;  => -0.5, -0.5 => good
+
+    // filterValueIndex = a_position - boundingBox.xy; => in 0 to 1 range good
+
+    // filterValueIndex = a_position - boundingBox.xy;
+    // filterValueIndex =  filterValueIndex / size; => 0 to 1 range good
+
+    // filterValueIndex = a_position - boundingBox.xy;
+    // filterValueIndex =  filterValueIndex / size;
+    // filterValueIndex = filterValueIndex * 2.0 - vec2(1.0);
+
 
     // HACK
     // gl_Position = vec4(0., 0., 0., 1.);
@@ -107,7 +131,7 @@ void main()
 
 const random = getRandom();
 
-const NUM_INSTANCES = 1000;
+const NUM_INSTANCES = 1000; // 6; // 1000;  // TODO less than 6 doesn't render polygon
 const log = new Log({id: 'transform'}).enable();
 
 // TODO PIKCING TEMPORARILY DISABLED
@@ -121,6 +145,26 @@ function mouseleave(e) {
   pickPosition = null;
 }
 
+function getPositionData() {
+  const positions = new Float32Array(NUM_INSTANCES * 2);
+  for (let i = 0; i < NUM_INSTANCES; ++i) {
+    positions[i * 2] = random() * 2.0 - 1.0;
+    positions[i * 2 + 1] = random() * 2.0 - 1.0;
+  }
+  return positions;
+
+  // return new Float32Array([
+  //   // origin bottom left
+  //   0, 0,
+  //   -0.45, -0.15, // left
+  //   -0.25, 0.5, // left top
+  //
+  //   0.15, -0.22, // mid bottom
+  //
+  //   0.4, 0.24, // right top
+  //   0.4, -0.14, // right bottom
+  // ]);
+}
 export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
@@ -137,12 +181,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     gl.canvas.addEventListener('mouseleave', mouseleave);
 
     // -- Initialize data
-    const positions = new Float32Array(NUM_INSTANCES * 2);
-
-    for (let i = 0; i < NUM_INSTANCES; ++i) {
-      positions[i * 2] = random() * 2.0 - 1.0;
-      positions[i * 2 + 1] = random() * 2.0 - 1.0;
-    }
+    const positions = getPositionData();
 
     const positionBuffer = new Buffer(gl, positions);
 
