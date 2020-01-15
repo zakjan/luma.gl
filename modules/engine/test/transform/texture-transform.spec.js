@@ -1,6 +1,6 @@
 import {Buffer, Texture2D} from '@luma.gl/webgl';
 // import {Transform} from '@luma.gl/engine';
-import {default as Transform} from '../../src/transform/buffer-transform';
+import {default as Transform} from '../../src/transform/texture-transform';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
@@ -19,7 +19,9 @@ void main()
 }
 `;
 
-test('WebGL#Transform run (source texture + feedback buffer)', t => {
+/*
+
+test('WebGL#TextureTransform run (source texture + feedback buffer)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -65,6 +67,23 @@ test('WebGL#Transform run (source texture + feedback buffer)', t => {
 
   t.end();
 });
+*/
+
+function getResourceCounts() {
+  /* global luma */
+  const resourceStats = luma.stats.get('Resource Counts');
+  return {
+    Texture2D: resourceStats.get('Texture2Ds Active').count,
+    Buffer: resourceStats.get('Buffers Active').count
+  };
+}
+
+function validateResourceCounts(t, startCounts, endCounts) {
+  for (const resourceName in endCounts) {
+    const leakCount = endCounts[resourceName] - startCounts[resourceName];
+    t.ok(leakCount === 0, `should delete all ${resourceName}, remaining ${leakCount}`);
+  }
+}
 
 const TEXTURE_BUFFER_TEST_CASES = [
   // NOTE: elementCount is equal to width * height
@@ -114,8 +133,8 @@ void main()
 `
   }
 ];
-
-test('WebGL#Transform run (source&destination texture + feedback buffer)', t => {
+/*
+test('WebGL#TextureTransform run (source&destination texture + feedback buffer)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -174,7 +193,7 @@ test('WebGL#Transform run (source&destination texture + feedback buffer)', t => 
 
   t.end();
 });
-
+*/
 const TEXTURE_TEST_CASES = [
   // NOTE: elementCount is equal to width * height
   // TODO: determine width and height based on elementCount and padding if needed
@@ -302,7 +321,7 @@ void main()
   }
 ];
 
-test('WebGL#Transform run (source&destination texture)', t => {
+test('WebGL#TextureTransform run (source&destination texture)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -361,7 +380,7 @@ test('WebGL#Transform run (source&destination texture)', t => {
 });
 
 /*
-test.only('WebGL#Transform update (source&destination texture)', t => {
+test.only('WebGL#TextureTransform update (source&destination texture)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -421,7 +440,7 @@ test.only('WebGL#Transform update (source&destination texture)', t => {
 });
 */
 
-test('WebGL#Transform run (source&destination texture update)', t => {
+test('WebGL#TextureTransform run (source&destination texture update)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -540,7 +559,7 @@ void main()
   }
 ];
 
-test('WebGL#Transform run (offline rendering)', t => {
+test('WebGL#TextureTransform run (offline rendering)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -587,7 +606,7 @@ test('WebGL#Transform run (offline rendering)', t => {
   t.end();
 });
 
-test('WebGL#Transform run (source&destination with custom FS)', t => {
+test('WebGL#TextureTransform run (source&destination with custom FS)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -738,7 +757,7 @@ void main()
   t.end();
 });
 
-test('WebGL#Transform run (custom parameters)', t => {
+test('WebGL#TextureTransform run (custom parameters)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -789,7 +808,7 @@ test('WebGL#Transform run (custom parameters)', t => {
   t.end();
 });
 
-test('WebGL#Transform (Buffer to Texture)', t => {
+test('WebGL#TextureTransform (Buffer to Texture)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -842,7 +861,8 @@ gl_FragColor = vec4(1.);
     _fs: fs,
     _targetTexture: texture,
     _targetTextureVarying: 'outTexture', // dummy varying to enable FB creation
-    elementCount: 2
+    elementCount: 2,
+    debug: true
   });
 
   transform.run({clearRenderTarget: true});

@@ -1,5 +1,6 @@
 import GL from '@luma.gl/constants';
 import {
+  assert,
   cloneTextureFrom,
   readPixelsToArray,
   getShaderVersion,
@@ -14,6 +15,7 @@ import {
   combineInjects
 } from '@luma.gl/shadertools';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
+import Model from '../lib/model';
 
 // TODO: move these constants to transform-shader-utils
 // Texture parameters needed so sample can precisely pick pixel for given element id.
@@ -36,20 +38,22 @@ export default class TextureTransform {
     this.bindings = []; // each element is an object : {sourceTextures, targetTexture, framebuffer}
 
     this.resources = {}; // resources to be deleted
+    this.elementIDBuffer = null; // for Texture only
 
     this._initialize(props);
     Object.seal(this);
   }
 
-  updateModelProps(props = {}) {
-    const updatedModelProps = this._processVertexShader(props);
-    return Object.assign({}, props, updatedModelProps);
-  }
+  // updateModelProps(props = {}) {
+  //   const updatedModelProps = this._processVertexShader(props);
+  //   return Object.assign({}, props, updatedModelProps);
+  // }
 
-  getDrawOptions(opts = {}) {
-    const {sourceTextures, framebuffer, targetTexture} = this.bindings[this.currentIndex];
+  run(opts = {}) {
+    const {clearRenderTarget = true} = opts;
+    const {sourceTextures, framebuffer, targetTexture, sourceBuffers} = this.bindings[this.currentIndex];
 
-    const attributes = Object.assign({}, opts.attributes);
+    const attributes = Object.assign({}, sourceBuffers, opts.attributes);
     const uniforms = Object.assign({}, opts.uniforms);
     const parameters = Object.assign({}, opts.parameters);
     let discard = opts.discard;
@@ -76,7 +80,13 @@ export default class TextureTransform {
       parameters.viewport = [0, 0, framebuffer.width, framebuffer.height];
     }
 
-    return {attributes, framebuffer, uniforms, discard, parameters};
+    const updatedOpts = Object.assign({}, opts, {attributes, framebuffer, uniforms, discard, parameters});
+
+    if (clearRenderTarget && updatedOpts.framebuffer) {
+      updatedOpts.framebuffer.clear({color: true});
+    }
+
+    this.model.transform(updatedOpts);
   }
 
   swap() {
@@ -87,7 +97,7 @@ export default class TextureTransform {
     return false;
   }
 
-  // update source and/or feedbackBuffers
+  // update source and/or target texture(s)
   update(opts = {}) {
     this._setupTextures(opts);
   }
@@ -127,22 +137,44 @@ export default class TextureTransform {
 
   // Delete owned resources.
   delete() {
-    if (this.ownTexture) {
-      this.ownTexture.delete();
+    const {model, ownTexture, elementIDBuffer} = this;
+    if (model) {
+      model.delete();
     }
-    if (this.elementIDBuffer) {
-      this.elementIDBuffer.delete();
+    if (ownTexture) {
+      ownTexture.delete();
+    }
+    if (elementIDBuffer) {
+      elementIDBuffer.delete();
     }
   }
 
   // Private
 
   _initialize(props = {}) {
-    const {_targetTextureVarying, _swapTexture} = props;
+    const {_targetTextureVarying, _swapTexture, _targetTexture} = props;
+
+    // must be writting to a a target texture
+    assert(_targetTextureVarying && _targetTexture);
+
     this._swapTexture = _swapTexture;
     this.targetTextureVarying = _targetTextureVarying;
+    // TODO remove 'hasTargetTexture' make it implict
     this.hasTargetTexture = _targetTextureVarying;
     this._setupTextures(props);
+
+    const updatedModelProps = this._processVertexShader(props);
+    Object.assign(props, updatedModelProps);
+
+    this.model = new Model(
+      this.gl,
+      Object.assign({}, props, {
+        fs: props.fs || getPassthroughFS({version: getShaderVersion(props.vs)}),
+        id: props.id || 'transform-model',
+        drawMode: props.drawMode || GL.POINTS,
+        vertexCount: props.elementCount
+      })
+    );
   }
 
   // auto create target texture if requested
@@ -165,14 +197,14 @@ export default class TextureTransform {
   }
 
   _setupTextures(props = {}) {
-    const {_sourceTextures = {}, _targetTexture} = props;
+    const {_sourceTextures = {}, _targetTexture, sourceBuffers} = props;
     const targetTexture = this._createTargetTexture({
       sourceTextures: _sourceTextures,
       textureOrReference: _targetTexture
     });
     this.hasSourceTextures =
       this.hasSourceTextures || (_sourceTextures && Object.keys(_sourceTextures).length > 0);
-    this._updateBindings({sourceTextures: _sourceTextures, targetTexture});
+    this._updateBindings({sourceTextures: _sourceTextures, targetTexture, sourceBuffers});
     if ('elementCount' in props) {
       this._updateElementIDBuffer(props.elementCount);
     }
@@ -201,24 +233,23 @@ export default class TextureTransform {
   _updateBindings(opts) {
     this.bindings[this.currentIndex] = this._updateBinding(this.bindings[this.currentIndex], opts);
     if (this._swapTexture) {
-      const {sourceTextures, targetTexture} = this._swapTextures(this.bindings[this.currentIndex]);
+      const textures = this._swapTextures(this.bindings[this.currentIndex]);
       const nextIndex = this._getNextIndex();
-      this.bindings[nextIndex] = this._updateBinding(this.bindings[nextIndex], {
-        sourceTextures,
-        targetTexture
-      });
+      this.bindings[nextIndex] = this._updateBinding(this.bindings[nextIndex], textures);
     }
   }
 
   _updateBinding(binding, opts) {
-    const {sourceTextures, targetTexture} = opts;
+    const {sourceTextures, targetTexture, sourceBuffers} = opts;
     if (!binding) {
       binding = {
         sourceTextures: {},
+        sourceBuffers: {},
         targetTexture: null
       };
     }
     Object.assign(binding.sourceTextures, sourceTextures);
+    Object.assign(binding.sourceBuffers, sourceBuffers);
     if (targetTexture) {
       binding.targetTexture = targetTexture;
 
@@ -264,7 +295,7 @@ export default class TextureTransform {
 
     const targetTexture = opts.sourceTextures[this._swapTexture];
 
-    return {sourceTextures, targetTexture};
+    return {sourceTextures, targetTexture, sourceBuffers: opts.sourceBuffers};
   }
 
   // Create a buffer and add to list of buffers to be deleted.
