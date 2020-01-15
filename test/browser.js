@@ -43,6 +43,6 @@ window.website = true;
 
 test('Browser tests', t => {
   require('./modules');
-  require('./render');
+  // require('./render');
   t.end();
 });

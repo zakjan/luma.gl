@@ -20,7 +20,7 @@ export default class Transform {
     this.elementCount = 0;
     this.bufferTransform = null;
     this.textureTransform = null;
-    this.elementIDBuffer = null;
+    this.elementIDBuffer = null; // for Texture only
     this._initialize(props);
     Object.seal(this);
   }

@@ -1,4 +1,4 @@
-import './lib';
+// import './lib';
 import './transform';
-import './geometry';
-import './animation';
+// import './geometry';
+// import './animation';
