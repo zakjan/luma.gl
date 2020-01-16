@@ -2,7 +2,8 @@
 export {default as AnimationLoop} from './lib/animation-loop';
 export {default as Model} from './lib/model';
 export {default as ProgramManager} from './lib/program-manager';
-export {default as Transform} from './transform/transform';
+export {default as Transform} from './transform/buffer-transform';
+export {default as TextureTransform} from './transform/texture-transform';
 
 // Geometries
 export {default as Geometry} from './geometry/geometry';
