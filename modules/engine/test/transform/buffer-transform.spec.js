@@ -1,10 +1,8 @@
-import {Buffer, Texture2D} from '@luma.gl/webgl';
+import {Buffer} from '@luma.gl/webgl';
 // import {Transform} from '@luma.gl/engine';
 import {default as Transform} from '../../src/transform/buffer-transform';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
-import GL from '@luma.gl/constants';
-import {setParameters, getParameters} from '@luma.gl/gltools';
 
 const VS = `\
 #version 300 es
@@ -120,6 +118,7 @@ test('WebGL#Transform constructor/delete', t => {
 });
 
 test('WebGL#Transform feedbackBuffer with referece', t => {
+  const startCounts = getResourceCounts();
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');
@@ -139,12 +138,16 @@ test('WebGL#Transform feedbackBuffer with referece', t => {
   t.ok(bt instanceof Transform, 'should construct manager with feedBackBuffers');
   const buffer = bt.getBuffer('outValue');
   t.ok(buffer instanceof Buffer, 'should auto create feedback buffer');
-
+  bt.delete();
+  source.delete();
+  const endCounts = getResourceCounts();
+  validateResourceCounts(t, startCounts, endCounts);
   t.end();
 });
 
 test('WebGL#Transform run', t => {
   const {gl2} = fixture;
+  const startCounts = getResourceCounts();
 
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -173,7 +176,10 @@ test('WebGL#Transform run', t => {
   const outData = transform.getData({varyingName: 'outValue'});
 
   t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
-
+  sourceBuffer.delete();
+  transform.delete();
+  const endCounts = getResourceCounts();
+  validateResourceCounts(t, startCounts, endCounts);
   t.end();
 });
 

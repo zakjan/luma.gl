@@ -22,55 +22,6 @@ function validateResourceCounts(t, startCounts, endCounts) {
   }
 }
 
-const TEXTURE_BUFFER_TEST_CASES = [
-  // NOTE: elementCount is equal to width * height
-  // TODO: determine width and height based on elementCount and padding if needed
-  {
-    name: 'RED-FLOAT',
-    sourceData: new Float32Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
-    format: GL.R32F,
-    dataFormat: GL.RED,
-    type: GL.FLOAT,
-    width: 4,
-    height: 4,
-    vs: `\
-#version 300 es
-in float inBuffer;
-in float inTexture;
-out float outBuffer;
-out float outTexture;
-
-void main()
-{
-  outBuffer = inTexture + inBuffer;
-  outTexture = inTexture + inBuffer;
-}
-`
-  },
-  {
-    name: 'RGBA-UNSIGNED_BYTE',
-    sourceData: new Uint8Array([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
-    format: GL.RGBA,
-    dataFormat: GL.RGBA,
-    type: GL.UNSIGNED_BYTE,
-    width: 2,
-    height: 2,
-    vs: `\
-#version 300 es
-in float inBuffer;
-in vec4 inTexture;
-out float outBuffer;
-out vec4 outTexture;
-
-void main()
-{
-  outBuffer = 2. * inBuffer;
-  outTexture = 2. *  inTexture;
-}
-`
-  }
-];
-
 const TEXTURE_TEST_CASES = [
   // NOTE: elementCount is equal to width * height
   // TODO: determine width and height based on elementCount and padding if needed
@@ -208,6 +159,7 @@ test('WebGL#TextureTransform run (source&destination texture)', t => {
   }
 
   TEXTURE_TEST_CASES.forEach(testCase => {
+    const startCounts = getResourceCounts();
     const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
     const sourceTexture = new Texture2D(gl2, {
       data: sourceData,
@@ -250,7 +202,11 @@ test('WebGL#TextureTransform run (source&destination texture)', t => {
     // By default getData reads data from current Framebuffer.
     outTexData = transform.getData({packed: true});
 
+    sourceTexture.delete();
+    transform.delete();
     t.deepEqual(outTexData, expectedData, `${name} Transform swap Textures`);
+    const endCounts = getResourceCounts();
+    validateResourceCounts(t, startCounts, endCounts);
   });
 
   t.end();
