@@ -6,69 +6,6 @@ import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
 import {setParameters, getParameters} from '@luma.gl/gltools';
 
-
-const VSTexInput = `\
-#version 300 es
-in float inBuffer;
-in float inTexture;
-out float outValue;
-
-void main()
-{
-  outValue = inBuffer + inTexture;
-}
-`;
-
-/*
-
-test('WebGL#TextureTransform run (source texture + feedback buffer)', t => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
-    t.comment('WebGL2 not available, skipping tests');
-    t.end();
-    return;
-  }
-
-  const sourceData = new Float32Array([20, -31, 0, 23.45]);
-  const sourceBuffer = new Buffer(gl2, {data: sourceData});
-  const sourceTexture = new Texture2D(gl2, {
-    data: sourceData,
-    format: GL.R32F,
-    dataFormat: GL.RED,
-    type: GL.FLOAT,
-    mipmaps: false,
-    width: 2,
-    height: 2,
-    pixelStore: {
-      [GL.UNPACK_FLIP_Y_WEBGL]: false
-    }
-  });
-  const transform = new Transform(gl2, {
-    sourceBuffers: {
-      inBuffer: sourceBuffer
-    },
-    _sourceTextures: {
-      inTexture: sourceTexture
-    },
-    vs: VSTexInput,
-    feedbackMap: {
-      inBuffer: 'outValue'
-    },
-    elementCount: sourceData.length
-  });
-
-  transform.run();
-
-  const expectedData = sourceData.map(x => x * 2);
-  const outData = transform.getData({varyingName: 'outValue'});
-
-  t.deepEqual(outData, expectedData, 'Transform.getData: is successful');
-
-  t.end();
-});
-*/
-
 function getResourceCounts() {
   /* global luma */
   const resourceStats = luma.stats.get('Resource Counts');
@@ -133,67 +70,7 @@ void main()
 `
   }
 ];
-/*
-test('WebGL#TextureTransform run (source&destination texture + feedback buffer)', t => {
-  const {gl2} = fixture;
 
-  if (!gl2) {
-    t.comment('WebGL2 not available, skipping tests');
-    t.end();
-    return;
-  }
-
-  TEXTURE_BUFFER_TEST_CASES.forEach(testCase => {
-    const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
-    const sourceBuffer = new Buffer(gl2, {data: new Float32Array(sourceData)});
-    const sourceTexture = new Texture2D(gl2, {
-      data: sourceData,
-      format,
-      dataFormat,
-      type,
-      mipmaps: false,
-      width,
-      height,
-      pixelStore: {
-        [GL.UNPACK_FLIP_Y_WEBGL]: false
-      }
-    });
-    const transform = new Transform(gl2, {
-      sourceBuffers: {
-        inBuffer: sourceBuffer
-      },
-      _sourceTextures: {
-        inTexture: sourceTexture
-      },
-      _targetTextureVarying: 'outTexture',
-      _targetTexture: 'inTexture',
-      vs,
-      feedbackMap: {
-        inBuffer: 'outBuffer'
-      },
-      elementCount: sourceData.length
-    });
-
-    transform.run();
-
-    const expectedData = sourceData.map(x => x * 2);
-    const outData = transform.getData({varyingName: 'outBuffer'});
-    t.deepEqual(outData, expectedData, `${name} Transform should write correct data into Buffer`);
-
-    // By default getData reads data from current Framebuffer.
-    const outTexData = transform.getData({varyingName: 'outTexture', packed: true});
-
-    // t.deepEqual(outData, expectedData, 'Transform should write correct data into Buffer');
-    t.deepEqual(
-      outTexData,
-      expectedData,
-      `${name} Transform should write correct data into Texture`
-    );
-  });
-
-  t.end();
-});
-*/
 const TEXTURE_TEST_CASES = [
   // NOTE: elementCount is equal to width * height
   // TODO: determine width and height based on elementCount and padding if needed
@@ -378,67 +255,6 @@ test('WebGL#TextureTransform run (source&destination texture)', t => {
 
   t.end();
 });
-
-/*
-test.only('WebGL#TextureTransform update (source&destination texture)', t => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
-    t.comment('WebGL2 not available, skipping tests');
-    t.end();
-    return;
-  }
-
-  const {sourceData, format, dataFormat, type, width, height, name, vs} = TEXTURE_TEST_CASES[0];
-  const sourceTexture = new Texture2D(gl2, {
-    data: sourceData,
-    format,
-    dataFormat,
-    type,
-    mipmaps: false,
-    width,
-    height,
-    pixelStore: {
-      [GL.UNPACK_FLIP_Y_WEBGL]: false
-    }
-  });
-  const transform = new Transform(gl2, {
-    _targetTextureVarying: 'outTexture',
-    _swapTexture: 'inTexture',
-    vs
-  });
-
-  transform.update({
-    _sourceTextures: {
-      inTexture: sourceTexture
-    },
-    _targetTexture: 'inTexture',
-    elementCount: sourceData.length
-  })
-
-  transform.run();
-
-  let expectedData = sourceData.map(x => x * 2);
-  // By default getData reads data from current Framebuffer.
-  let outTexData = transform.getData({packed: true});
-  t.deepEqual(
-    outTexData,
-    expectedData,
-    `${name} Transform should write correct data into Texture`
-  );
-
-  transform.swap();
-  transform.run();
-  expectedData = sourceData.map(x => x * 4);
-
-  // By default getData reads data from current Framebuffer.
-  outTexData = transform.getData({packed: true});
-
-  t.deepEqual(outTexData, expectedData, `${name} Transform swap Textures`);
-
-  t.end();
-});
-*/
 
 test('WebGL#TextureTransform run (source&destination texture update)', t => {
   const {gl2} = fixture;
