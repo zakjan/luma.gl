@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '@luma.gl/gltools';
 import {Buffer, TransformFeedback} from '@luma.gl/webgl';
-import {assert, isObjectEmpty, getShaderVersion} from '@luma.gl/webgl';
+import {assert, getShaderVersion} from '@luma.gl/webgl';
 import {getPassthroughFS} from '@luma.gl/shadertools';
 import Model from '../lib/model';
 
@@ -45,7 +45,6 @@ export default class BufferTransform {
 
   // Run one transform loop.
   run(opts = {}) {
-
     // const updatedOpts = this._updateDrawOptions(opts);
     const binding = this.bindings[this.currentIndex];
     const {sourceBuffers, transformFeedback} = binding;
@@ -127,7 +126,6 @@ export default class BufferTransform {
     for (const binding of this.bindings) {
       this._setupTransformFeedback(binding, {model: this.model});
     }
-
   }
 
   // auto create feedback buffers if requested

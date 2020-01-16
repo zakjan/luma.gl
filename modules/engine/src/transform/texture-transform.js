@@ -51,7 +51,9 @@ export default class TextureTransform {
 
   run(opts = {}) {
     const {clearRenderTarget = true} = opts;
-    const {sourceTextures, framebuffer, targetTexture, sourceBuffers} = this.bindings[this.currentIndex];
+    const {sourceTextures, framebuffer, targetTexture, sourceBuffers} = this.bindings[
+      this.currentIndex
+    ];
 
     const attributes = Object.assign({}, sourceBuffers, opts.attributes);
     const uniforms = Object.assign({}, opts.uniforms);
@@ -80,7 +82,13 @@ export default class TextureTransform {
       parameters.viewport = [0, 0, framebuffer.width, framebuffer.height];
     }
 
-    const updatedOpts = Object.assign({}, opts, {attributes, framebuffer, uniforms, discard, parameters});
+    const updatedOpts = Object.assign({}, opts, {
+      attributes,
+      framebuffer,
+      uniforms,
+      discard,
+      parameters
+    });
 
     if (clearRenderTarget && updatedOpts.framebuffer) {
       updatedOpts.framebuffer.clear({color: true});
