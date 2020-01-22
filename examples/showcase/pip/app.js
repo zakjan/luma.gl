@@ -7,6 +7,7 @@ import {cssToDevicePixels, isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
 import {getRandom} from '../../utils';
 import {getPolygonTexture, dumpNonZeroValues, PolygonFilter} from './utils';
+import {GPUPolygonClip} from './utils';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
 
@@ -60,12 +61,12 @@ void main()
 `;
 
 const POLY_FS = `\
-#define ALPHA 0.9
+#define ALPHA 1.0
 precision highp float;
 precision highp int;
 void main()
 {
-    gl_FragColor = vec4(vec3(1.0, 0., 1.) * ALPHA, ALPHA);
+    gl_FragColor = vec4(vec3(1.0, 1., 0.) * ALPHA, ALPHA);
 }
 `;
 
@@ -185,7 +186,8 @@ export default class AppAnimationLoop extends AnimationLoop {
       polygonWireFrameModel,
       pickingFramebuffer,
       filterTransform,
-      polygonFilter: new PolygonFilter(gl)
+      polygonFilter: new PolygonFilter(gl),
+      gpuPolygonClip: new GPUPolygonClip(gl),
     };
   }
   /* eslint-enable max-statements */
@@ -203,7 +205,8 @@ export default class AppAnimationLoop extends AnimationLoop {
     time,
     pickingFramebuffer,
     filterTransform,
-    polygonFilter
+    polygonFilter,
+    gpuPolygonClip
   }) {
     if (this.demoNotSupported) {
       return;
@@ -214,7 +217,10 @@ export default class AppAnimationLoop extends AnimationLoop {
     const offsetX = useOffsets ? -0.25 : 0;
     const offsetY = useOffsets ? -0.25 : 0;
     // const {polyPosBuffer, texture, boundingBox, size, polyWireFrameBuffer} = polygonFilter.update(offsetX, offsetY);
-    const {polyPosBuffer, texture, boundingBox, size, polyWireFrameBuffer} = polygonFilter.update();
+    const {polyPosBuffer, texture, boundingBox, size, polyWireFrameBuffer, polygons} = polygonFilter.update();
+
+
+    gpuPolygonClip.update({polygon: polygons[0]});
 
     clear(gl, {color: [0, 0, 0, 1]});
 
@@ -231,19 +237,13 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     pointsModel.draw();
 
-    polygonWireFrameModel.draw({
-      attributes: {
-        a_position: polyWireFrameBuffer
-      }
-    });
-
-    // polygonModel.draw({
+    // polygonWireFrameModel.draw({
     //   attributes: {
-    //     a_position: polyPosBuffer
+    //     a_position: polyWireFrameBuffer
     //   }
     // });
 
-
+    gpuPolygonClip.polygonModel.draw();
   }
 
   onFinalize({pointsModel, transform, polygonModel}) {
@@ -265,5 +265,5 @@ export default class AppAnimationLoop extends AnimationLoop {
 
 if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
-  animationLoop.start();
+  animationLoop.start({debug: true});
 }
