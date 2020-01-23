@@ -55,7 +55,7 @@ const TEST_CASES = [
       [0.25, -0.25],
       [0.45, 0.25],
       [0.34, 0.43],
-      // [-0.25, 0.45], // on a edge border, gives different results
+      // [-0.25, 0.45], // on polygon edge, gives different results for CPU and GPU
       [-0.25, 0.5],
       [-0.45, 0.45],
       [0.33, 0.44],
