@@ -123,9 +123,8 @@ export default class GPUPolygonClip {
       vs: POLY_TEX_VS,
       fs: POLY_TEX_FS,
       drawMode: GL.TRIANGLES,
-      isIndexed: true,
-
-      debug: true
+      isIndexed: true
+      // debug: true
     });
     this.positionBuffer = new Buffer(gl, {accessor: {type: GL.FLOAT, size: 2}});
     this.indexBuffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER, accessor: {type: GL.UNSIGNED_SHORT}});
@@ -136,24 +135,24 @@ export default class GPUPolygonClip {
       fs: POLY_FS,
       drawMode: GL.TRIANGLES,
       vertexCount: 12,
-      isIndexed: true,
-      debug: true
+      isIndexed: true
+      // debug: true
     });
 
      this.polygonWireFrameModel = new Model(gl, {
       id: 'RenderTriangles',
       vs: POLY_VS,
       fs: POLY_FS,
-      drawMode: GL.LINE_LOOP,
-      debug: true
+      drawMode: GL.LINE_LOOP
+      // debug: true
     });
     this.wireframeBuffer = new Buffer(gl, {accessor: {type: GL.FLOAT, size: 2}});
 
     this.filterTransform = new Transform(gl, {
       id: 'filter transform',
       vs: FILTER_VS,
-      varyings: ['filterValueIndex'],
-      debug: true
+      varyings: ['filterValueIndex']
+      // debug: true
     });
 
 
@@ -173,8 +172,8 @@ export default class GPUPolygonClip {
     const bbSize = [boundingBox[2] - boundingBox[0], boundingBox[3] - boundingBox[1]];
     this.boundingBox = boundingBox;
     this.bbSize = bbSize;
-    console.log(`boundingBox: ${boundingBox}`);
-    console.log(`size: ${size}`);
+    // console.log(`boundingBox: ${boundingBox}`);
+    // console.log(`size: ${size}`);
 
     const whRatio = bbSize[0] / bbSize[1];
 
@@ -189,7 +188,7 @@ export default class GPUPolygonClip {
       texHeight = texWidth / whRatio;
     }
     // TODO: clamp to max texture size
-    console.log(`GPUPolygonClip: size: ${textureSize} Tex: w: ${texWidth} h: ${texHeight} whRatio: ${whRatio}`);
+    // console.log(`GPUPolygonClip: size: ${textureSize} Tex: w: ${texWidth} h: ${texHeight} whRatio: ${whRatio}`);
 
 
     this.polygonTexture.resize({width: texWidth, height: texHeight, mipmaps: false});
@@ -247,7 +246,7 @@ export default class GPUPolygonClip {
       elementCount: pointCount
     });
     const {polygonTexture, boundingBox, bbSize} = this;
-    console.log(`gpuPolygonClip#run: boundingBox: ${boundingBox} bbSize: ${bbSize}`);
+    // console.log(`gpuPolygonClip#run: boundingBox: ${boundingBox} bbSize: ${bbSize}`);
     this.filterTransform.run({
       uniforms: {
         filterTexture: polygonTexture,
