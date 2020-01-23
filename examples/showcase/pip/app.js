@@ -44,7 +44,7 @@ void main()
 }
 `;
 
-const NUM_INSTANCES = 100; // 6; // 1000;  // TODO less than 6 doesn't render polygon
+const NUM_INSTANCES = 1000;
 const log = new Log({id: 'transform'}).enable();
 
 export default class AppAnimationLoop extends AnimationLoop {
