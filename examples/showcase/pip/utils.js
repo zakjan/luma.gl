@@ -391,12 +391,17 @@ export function getRandomPolygon(size) {
   const radiusStep = 0.25;
   let radius = 0;
   const polygon = [];
+  const xOffset = (random() - 0.5)/4;
+  const yOffset = (random() - 0.5)/4;
   for (let i=0; i<size; i++) {
     radius = 0.25 + radiusStep*random(); // random value between 0.25 to 0.5
     angle = (angleStep * i) + angleStep*random();
     const cos =  Math.cos(angle * Math.PI / 180);
     const sin =  Math.sin(angle * Math.PI / 180);
-    polygon.push([radius * sin, radius * cos]);
+    polygon.push([
+      radius * sin + xOffset,
+      radius * cos + yOffset
+    ]);
   }
   random_polygon = polygon;
   return polygon;
