@@ -31,7 +31,7 @@ let random_polygon_counter = 0;
 export function getRandomPolygon(size) {
 
   random_polygon_counter++;
-  if (random_polygon && random_polygon_counter % 50 !== 0) {
+  if (random_polygon && random_polygon_counter % 100 !== 0) {
       return random_polygon;
   }
 

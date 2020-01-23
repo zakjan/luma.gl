@@ -47,7 +47,6 @@ void main()
 const NUM_INSTANCES = 100; // 6; // 1000;  // TODO less than 6 doesn't render polygon
 const log = new Log({id: 'transform'}).enable();
 
-
 export default class AppAnimationLoop extends AnimationLoop {
   static getInfo() {
     return INFO_HTML;
@@ -110,22 +109,25 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
     clear(gl, {color: [0.25, 0.25, 0.25, 1]});
 
-
     const polygon = getRandomPolygon();
 
-
-    if (tick%2) {
+    let color;
+    if (tick % 20 < 5) {
       gpuPolygonClip.update({polygon});
       gpuPolygonClip.run({positionBuffer, filterValueIndexBuffer, pointCount: NUM_INSTANCES});
+      color = [1, 1, 0, 1];
     } else {
       cpuPointInPolygon.update({polygon});
       const {filterValueIndexArray} = cpuPointInPolygon.run({points: pointsArray});
       filterValueIndexBuffer.setData(filterValueIndexArray);
+      color = [0, 1, 1, 1];
     }
 
     pointsModel.draw();
 
-    gpuPolygonClip.polygonWireFrameModel.draw();
+    gpuPolygonClip.polygonWireFrameModel.draw({
+      uniforms: {color}
+    });
   }
 
   onFinalize({pointsModel}) {

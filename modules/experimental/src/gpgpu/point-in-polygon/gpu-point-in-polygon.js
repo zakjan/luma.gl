@@ -22,7 +22,7 @@ void main()
 const POLY_TEX_FS = `\
 void main()
 {
-    gl_FragColor = vec4(255., 1., 100., 1.0);
+    gl_FragColor = vec4(1.0);
 }
 `;
 
@@ -41,9 +41,11 @@ const POLY_FS = `\
 #define ALPHA 1.0
 precision highp float;
 precision highp int;
+uniform vec4 color;
 void main()
 {
-    gl_FragColor = vec4(vec3(1.0, 1., 0.) * ALPHA, ALPHA);
+    // gl_FragColor = vec4(vec3(1.0, 1., 0.) * ALPHA, ALPHA);
+    gl_FragColor = color;
 }
 `;
 
