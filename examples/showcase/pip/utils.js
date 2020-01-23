@@ -55,6 +55,38 @@ void main()
 }
 `;
 
+const FILTER_VS = `\
+#version 300 es
+uniform vec4 boundingBox; //[xMin, xMax, yMin, yMax]
+uniform vec2 size; // [width, height]
+uniform sampler2D filterTexture;
+in vec2 a_position;
+out vec2 filterValueIndex; //[x: 0 (outside polygon)/1 (inside), y: position index]
+void main()
+{
+    // [0, 0] -> [width, height]
+    vec2 pos = a_position - boundingBox.xy;
+    pos = pos / size;
+    // pos = pos * 2.0 - vec2(1.0);
+    filterValueIndex.y = float(gl_VertexID);
+    if (pos.x < 0. || pos.x > 1. || pos.y < 0. || pos.y > 1.) {
+      filterValueIndex.x = 0.;
+
+      // HACK
+      filterValueIndex.xy = vec2(0.);
+    } else {
+      // vec2 texCord = (pos.xy + vec2 (1.)) / 2.;  // TODO: fixed order of operations
+      float filterFlag = texture(filterTexture, pos.xy).r;
+
+      filterValueIndex.x =  filterFlag > 0. ? 1. : 0.0; // 0.5;
+
+      // HACK
+      //filterValueIndex.xy = pos;
+
+    }
+}
+`;
+
 function getBoundingBox(positions, vertexCount) {
 
   let yMin = Infinity;
@@ -78,8 +110,12 @@ function getBoundingBox(positions, vertexCount) {
 
 const TRIANGLES = [
   [-0.5, -0.5,  0, 0, -0.5, 0.5],
-  [0.5, -0.5,  0, 0,  0.5, 0.5]
+ [0.5, -0.5,  0, 0,  0.5, 0.5]
 ];
+
+const POLYGON = [
+  [-0.5, -0.5],  [0, 0], [-0.5, 0.5], [-0.75, 0]
+]
 
 export class PolygonFilter {
   constructor(gl, {triangles = TRIANGLES} = {}) {
@@ -114,9 +150,10 @@ export class PolygonFilter {
         triangle[2], triangle[3], triangle[4], triangle[5],
         triangle[4], triangle[5], triangle[0], triangle[1]
       );
-      polygons.push([
-        [triangle[0], triangle[1]], [triangle[2], triangle[3]], [triangle[4], triangle[5]]
-      ]);
+      // polygons.push([
+      //   [triangle[0], triangle[1]], [triangle[2], triangle[3]], [triangle[4], triangle[5]]
+      // ]);
+      polygons.push(POLYGON.slice());
     }
 
     if (this.triangleBuffer) {
@@ -338,6 +375,32 @@ export function dumpNonZeroValues(array, size = 4, title = 'Logging array conten
   console.log(`Non zero count: ${nonZeroCount}`);
 
 }
+let random_polygon;
+let random_polygon_counter = 0;
+export function getRandomPolygon(size) {
+
+  random_polygon_counter++;
+  if (random_polygon && random_polygon_counter % 50 !== 0) {
+      return random_polygon;
+  }
+
+  size = size || 3 + Math.floor(random() * 50);
+  size = Math.max(size, 3);
+  const angleStep = 360 / size ;
+  let angle = 0;
+  const radiusStep = 0.25;
+  let radius = 0;
+  const polygon = [];
+  for (let i=0; i<size; i++) {
+    radius = 0.25 + radiusStep*random(); // random value between 0.25 to 0.5
+    angle = (angleStep * i) + angleStep*random();
+    const cos =  Math.cos(angle * Math.PI / 180);
+    const sin =  Math.sin(angle * Math.PI / 180);
+    polygon.push([radius * sin, radius * cos]);
+  }
+  random_polygon = polygon;
+  return polygon;
+}
 
 export class GPUPolygonClip {
   constructor(gl, {textureSize = TEXTURE_SIZE, polygons} = {}) {
@@ -372,10 +435,34 @@ export class GPUPolygonClip {
       id: 'RenderPolygonWireframe',
       vs: POLY_VS,
       fs: POLY_FS,
-      drawMode: GL.LINE_LOOP,
+      drawMode: GL.TRIANGLES,
       vertexCount: 12,
       isIndexed: true,
       debug: true
+    });
+
+     this.polygonWireFrameModel = new Model(gl, {
+      id: 'RenderTriangles',
+      vs: POLY_VS,
+      fs: POLY_FS,
+      drawMode: GL.LINE_LOOP,
+      debug: true
+    });
+    this.wireframeBuffer = new Buffer(gl, {accessor: {type: GL.FLOAT, size: 2}});
+
+    this.filterTransform = new Transform(gl, {
+      id: 'filter transform',
+      vs: FILTER_VS,
+      // elementCount: NUM_INSTANCES,
+      // sourceBuffers: {
+      //   a_position: positionBuffer
+      // },
+      // feedbackBuffers: {
+      //   filterValueIndex: filterValueIndexBuffer
+      // },
+      varyings: ['filterValueIndex'],
+      debug: true
+      // TODO provide feedback buffer and varyings instead of feedbackMap
     });
 
 
@@ -421,17 +508,25 @@ export class GPUPolygonClip {
     const indices = new Uint16Array(Polygon.getSurfaceIndices(complexPolygon, 2));
     this.indexBuffer.setData(indices);
 
+    this.wireframeBuffer.setData(new Float32Array(complexPolygon));
+
     // const ArrayType = hasFeature(gl, FEATURES.ELEMENT_INDEX_UINT32) ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT;
 
     // assert(vertexCount === indices.length, `vertexCount: ${vertexCount} is not same as index count: ${indices.length}`);
 
     this.polyTextureTransform.update({
-      elementCount: vertexCount,
+      elementCount: indices.length,
       _targetTexture: this.polygonTexture,
       sourceBuffers: {
         a_position: this.positionBuffer,
         indices: this.indexBuffer // key doesn't matter
       },
+    });
+    this.polyTextureTransform.run({
+      uniforms: {
+        boundingBox,
+        size: bbSize
+      }
     });
 
     this.polygonModel.setProps({
@@ -440,7 +535,34 @@ export class GPUPolygonClip {
         indices: this.indexBuffer // key doesn't matter
       }
     });
-    this.polygonModel.setVertexCount(vertexCount-1);
+    this.polygonModel.setVertexCount(indices.length); // (vertexCount-1);
+
+    this.polygonWireFrameModel.setProps({
+      attributes: {
+        a_position: this.wireframeBuffer
+      }
+    });
+    this.polygonWireFrameModel.setVertexCount(complexPolygon.length/2);
   }
 
+  run({positionBuffer, filterValueIndexBuffer, pointCount}) {
+    this.filterTransform.update({
+      sourceBuffers: {
+        a_position: positionBuffer
+      },
+      feedbackBuffers: {
+        filterValueIndex: filterValueIndexBuffer
+      },
+      elementCount: pointCount
+    });
+    const {polygonTexture, boundingBox, bbSize} = this;
+    console.log(`gpuPolygonClip#run: boundingBox: ${boundingBox} bbSize: ${bbSize}`);
+    this.filterTransform.run({
+      uniforms: {
+        filterTexture: polygonTexture,
+        boundingBox,
+        size: bbSize
+      }
+    });
+  }
 }
