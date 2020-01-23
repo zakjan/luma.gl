@@ -20,9 +20,6 @@ void main()
     pos = pos / size;
     pos = pos * 2.0 - vec2(1.0);
     gl_Position = vec4(pos, 0.0, 1.0);
-
-    // HACK
-    // gl_Position = vec4(0., 0., 0., 1.);
 }
 `;
 
@@ -39,7 +36,6 @@ precision highp int;
 attribute vec2 a_position;
 void main()
 {
-
     gl_Position = vec4(a_position, 0.0, 1.0);
     gl_PointSize = 5.;
 }
@@ -71,18 +67,10 @@ void main()
     filterValueIndex.y = float(gl_VertexID);
     if (pos.x < 0. || pos.x > 1. || pos.y < 0. || pos.y > 1.) {
       filterValueIndex.x = 0.;
-
-      // HACK
-      filterValueIndex.xy = vec2(0.);
     } else {
-      // vec2 texCord = (pos.xy + vec2 (1.)) / 2.;  // TODO: fixed order of operations
       float filterFlag = texture(filterTexture, pos.xy).r;
 
       filterValueIndex.x =  filterFlag > 0. ? 1. : 0.0; // 0.5;
-
-      // HACK
-      //filterValueIndex.xy = pos;
-
     }
 }
 `;
@@ -117,264 +105,15 @@ const POLYGON = [
   [-0.5, -0.5],  [0, 0], [-0.5, 0.5], [-0.75, 0]
 ]
 
-export class PolygonFilter {
-  constructor(gl, {triangles = TRIANGLES} = {}) {
-    this.triangles = triangles.slice();
-    this.gl = gl;
-    this.update();
+export function getRandomPoints(count) {
+  const positions = new Float32Array(count * 2);
+  for (let i = 0; i < count; ++i) {
+    positions[i * 2] = random() * 2.0 - 1.0;
+    positions[i * 2 + 1] = random() * 2.0 - 1.0;
   }
-
-  update(tock = 0, offsetX, offsetY) {
-    const {gl, triangles} = this;
-    const triangleVertices = [];
-    const triangleWireFrameVertices = [];
-    const triangleCount = triangles.length;
-    const polygons = [];
-    for (let i=0; i< triangleCount; i++) {
-      let xOffset = 0;
-      let yOffset = 0;
-      if (tock%3===0) {
-        xOffset = offsetX || random() * 0.03 * (random() > 0.5 ? 1 : -1);
-        yOffset = offsetY || random() * 0.01 * (random() > 0.5 ? 1 : -1);
-      }
-      const triangle = triangles[i]; //.slice();
-      for (let j=0; j<3; j++) {
-        triangle[j*2] += xOffset;
-        triangle[j*2+1] += yOffset;
-      }
-      // console.log(`xOffset: ${xOffset} yOffset: ${yOffset}`);
-      // console.log(`Triangel#${i+1}: ${triangle}`);
-      triangleVertices.push(...triangle);
-      triangleWireFrameVertices.push(
-        triangle[0], triangle[1], triangle[2], triangle[3],
-        triangle[2], triangle[3], triangle[4], triangle[5],
-        triangle[4], triangle[5], triangle[0], triangle[1]
-      );
-      // polygons.push([
-      //   [triangle[0], triangle[1]], [triangle[2], triangle[3]], [triangle[4], triangle[5]]
-      // ]);
-      polygons.push(POLYGON.slice());
-    }
-
-    if (this.triangleBuffer) {
-      this.triangleBuffer.delete();
-    }
-    this.triangleBuffer = new Buffer(gl, new Float32Array(triangleVertices));
-    this.triangleWFBuffer = new Buffer(gl, new Float32Array(triangleWireFrameVertices));
-    const boundingBox = getBoundingBox(triangleVertices, triangleCount * 3);
-    const size = [boundingBox[2] - boundingBox[0], boundingBox[3] - boundingBox[1]];
-    this.boundingBox = boundingBox;
-    this.size = size;
-    // console.log(`boundingBox: ${boundingBox}`);
-    // console.log(`size: ${size}`);
-
-    const whRatio = size[0] / size[1];
-
-    let texWidth = TEXTURE_SIZE;
-    let texHeight = TEXTURE_SIZE;
-
-    if (whRatio > 1) {
-      texHeight = TEXTURE_SIZE;
-      texWidth = texHeight * whRatio;
-    } else {
-      texWidth = TEXTURE_SIZE;
-      texHeight = texWidth / whRatio;
-    }
-    // const textureData = new Float32Array(texWidth * texHeight * 4);
-    if (this.polygonTexture) {
-      this.polygonTexture.delete();
-    }
-    this.polygonTexture = new Texture2D(gl, {
-      // data: textureData,
-
-      // format: GL.RGBA32F, // GL.RGBA, // verify support for GL.R
-      // type: GL.FLOAT, // GL.UNSIGNED_BYTE,
-      // dataFormat: GL.RGBA,
-
-      format: GL.RGB,
-      type: GL.UNSIGNED_BYTE,
-      dataFormat: GL.RGB,
-
-      border: 0,
-      mipmaps: false,
-
-      parameters: {
-        [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
-        [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
-      },
-
-      width: texWidth,
-      height: texHeight
-    });
-
-    if (!this.polyTextureTransform) {
-      this.polyTextureTransform = new Transform(gl, {
-        id: `polygon-texture-creation-transform`,
-        elementCount: triangleCount * 3,
-        _targetTexture: this.polygonTexture,
-        vs: POLY_TEX_VS,
-        fs: POLY_TEX_FS,
-        sourceBuffers: {
-          a_position: this.triangleBuffer
-        },
-        drawMode: GL.TRIANGLES,
-        debug: true
-      });
-    } else {
-      this.polyTextureTransform.update({
-        elementCount: triangleCount * 3,
-        _targetTexture: this.polygonTexture,
-        sourceBuffers: {
-          a_position: this.triangleBuffer
-        },
-      });
-    }
-    this.polyTextureTransform.run({
-      clearRenderTarget: true,
-      parameters: {
-        depthTest: false
-      },
-      uniforms: {
-        boundingBox,
-        size
-      },
-    });
-    const polyData = this.polyTextureTransform.getData();
-
-    return {
-      polyPosBuffer: this.triangleBuffer,
-      polyWireFrameBuffer: this.triangleWFBuffer,
-      texture: this.polygonTexture,
-      data: polyData,
-      transform: this.polyTextureTransform,
-      boundingBox: this.boundingBox,
-      size: this.size,
-      polygons
-    };
-  }
+  return positions;
 }
 
-export function getPolygonTexture(gl) {
-
-  const triangles =  new Float32Array([
-    -0.5, -0.5,  0, 0, -0.5, 0.5,
-    0.5, -0.5,  0, 0,  0.5, 0.5
-  ]);
-  const triangles_wireframe_buffer = new Buffer(gl, new Float32Array([
-    -0.5, -0.5,  0, 0,
-    0, 0, -0.5, 0.5,
-    -0.5, 0.5, -0.5, -0.5,
-
-    0.5, -0.5,  0, 0,
-    0, 0,  0.5, 0.5,
-    0.5, 0.5, 0.5, -0.5
-  ]));
-
-  const triangleBuffer = new Buffer(gl, triangles);
-
-  const boundingBox = getBoundingBox(triangles, 6);
-  const size = [boundingBox[2] - boundingBox[0], boundingBox[3] - boundingBox[1]];
-  const whRatio = size[0] / size[1];
-
-  let texWidth = TEXTURE_SIZE;
-  let texHeight = TEXTURE_SIZE;
-
-  if (whRatio > 1) {
-    texHeight = TEXTURE_SIZE;
-    texWidth = texHeight * whRatio;
-  } else {
-    texWidth = TEXTURE_SIZE;
-    texHeight = texWidth / whRatio;
-  }
-  console.log(`getPolygonTexture: size: ${TEXTURE_SIZE} Tex: w: ${texWidth} h: ${texHeight} whRatio: ${whRatio}`);
-
-  console.log(`Polygon texture w: ${texWidth} h: ${texHeight}`);
-
-  const textureData = new Float32Array(texWidth * texHeight * 4);
-  textureData[0] = 10.0;
-  textureData[texWidth * texHeight * 2 + 1] = 100.0;
-  const polygonTexture = new Texture2D(gl, {
-    data: textureData,
-    // format: GL.RGBA32F, // GL.RGBA, // verify support for GL.R
-    // type: GL.FLOAT, // GL.UNSIGNED_BYTE,
-    // dataFormat: GL.RGBA,
-    format: GL.RGB,
-    type: GL.UNSIGNED_BYTE,
-    dataFormat: GL.RGB,
-
-    border: 0,
-    mipmaps: false,
-    parameters: {
-      [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
-      [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
-    },
-    // pixelStore: {
-    //   [GL.UNPACK_FLIP_Y_WEBGL]: false
-    // },
-    width: texWidth,
-    height: texHeight
-  })
-
-  const polyTextureTransform = new Transform(gl, {
-    id: `polygon-texture-creation-transform`,
-    elementCount: 6,
-    _targetTexture: polygonTexture,
-    vs: POLY_TEX_VS,
-    fs: POLY_TEX_FS,
-    sourceBuffers: {
-      a_position: triangleBuffer
-    },
-    uniforms: {
-      boundingBox,
-      size
-    },
-    drawMode: GL.TRIANGLES,
-    debug: true
-  });
-
-  polyTextureTransform.run({
-    clearRenderTarget: true,
-    parameters: {
-      depthTest: false
-    }
-  });
-
-  const polyData = polyTextureTransform.getData();
-
-  // console.log(`Logging polygon texture data: totalCount: ${polyData.length/4}`);
-  // let nonZeroCount = 0;
-  // for (let i=0; i< polyData.length; i+=4) {
-  //   if (polyData[i] || polyData[i + 1] || polyData[i + 2]) {
-  //     nonZeroCount++;
-  //     console.log(polyData[i], polyData[i+1], polyData[i+2]);
-  //   }
-  // }
-  // console.log(`Non zero count: ${nonZeroCount}`);
-
-
-  return {
-    polyPosBuffer: triangleBuffer,
-    polyWireFrameBuffer: triangles_wireframe_buffer,
-    texture: polygonTexture,
-    data: polyData,
-    transform: polyTextureTransform,
-    boundingBox,
-    size
-  };
-}
-
-export function dumpNonZeroValues(array, size = 4, title = 'Logging array content') {
-  console.log(`Logging polygon texture data: totalCount: ${array.length/size}`);
-  let nonZeroCount = 0;
-  for (let i=0; i< array.length; i+=size) {
-    if (array[i] || (size < 2 ? true: array[i + 1]) || (size < 3 ? true: array[i + 2])) {
-      nonZeroCount++;
-      console.log(array[i], array[i+1]);
-    }
-  }
-  console.log(`Non zero count: ${nonZeroCount}`);
-
-}
 let random_polygon;
 let random_polygon_counter = 0;
 export function getRandomPolygon(size) {
@@ -458,16 +197,8 @@ export class GPUPolygonClip {
     this.filterTransform = new Transform(gl, {
       id: 'filter transform',
       vs: FILTER_VS,
-      // elementCount: NUM_INSTANCES,
-      // sourceBuffers: {
-      //   a_position: positionBuffer
-      // },
-      // feedbackBuffers: {
-      //   filterValueIndex: filterValueIndexBuffer
-      // },
       varyings: ['filterValueIndex'],
       debug: true
-      // TODO provide feedback buffer and varyings instead of feedbackMap
     });
 
 
