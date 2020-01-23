@@ -4,7 +4,8 @@ import {Buffer, Framebuffer, clear, Texture2D} from '@luma.gl/webgl';
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
-import {GPUPolygonClip, getRandomPoints, getRandomPolygon} from './utils';
+import {getRandomPoints, getRandomPolygon} from './utils';
+import {GPUPointInPolygon, CPUPointInPolygon} from '@luma.gl/experimental';
 
 /* eslint-disable max-len */
 const INFO_HTML = `
@@ -15,7 +16,7 @@ const INFO_HTML = `
 
 // Text to be displayed on environments when this demos is not supported.
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
-
+const USE_GPU = false;
 const DRAW_VS = `\
 precision highp float;
 precision highp int;
@@ -61,9 +62,9 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
 
     // -- Initialize data
-    const positions = getRandomPoints(NUM_INSTANCES);
+    const {flatArray, pointsArray} = getRandomPoints(NUM_INSTANCES);
 
-    const positionBuffer = new Buffer(gl, positions);
+    const positionBuffer = new Buffer(gl, flatArray);
 
     // buffer to hold filtered data
     const filterValueIndexBuffer = new Buffer(gl, NUM_INSTANCES * 2 * 4); //vec2 buffer
@@ -82,10 +83,12 @@ export default class AppAnimationLoop extends AnimationLoop {
     });
 
     return {
+      pointsArray,
       positionBuffer,
       filterValueIndexBuffer,
       pointsModel,
-      gpuPolygonClip: new GPUPolygonClip(gl, {textureSize: 512}),
+      gpuPolygonClip: new GPUPointInPolygon(gl, {textureSize: 512}),
+      cpuPointInPolygon: new CPUPointInPolygon()
     };
   }
   /* eslint-enable max-statements */
@@ -95,9 +98,12 @@ export default class AppAnimationLoop extends AnimationLoop {
     width,
     height,
     pointsModel,
+    pointsArray,
     positionBuffer,
     filterValueIndexBuffer,
-    gpuPolygonClip
+    gpuPolygonClip,
+    cpuPointInPolygon,
+    tick
   }) {
     if (this.demoNotSupported) {
       return;
@@ -108,8 +114,14 @@ export default class AppAnimationLoop extends AnimationLoop {
     const polygon = getRandomPolygon();
 
 
-    gpuPolygonClip.update({polygon});
-    gpuPolygonClip.run({positionBuffer, filterValueIndexBuffer, pointCount: NUM_INSTANCES});
+    if (tick%2) {
+      gpuPolygonClip.update({polygon});
+      gpuPolygonClip.run({positionBuffer, filterValueIndexBuffer, pointCount: NUM_INSTANCES});
+    } else {
+      cpuPointInPolygon.update({polygon});
+      const {filterValueIndexArray} = cpuPointInPolygon.run({points: pointsArray});
+      filterValueIndexBuffer.setData(filterValueIndexArray);
+    }
 
     pointsModel.draw();
 

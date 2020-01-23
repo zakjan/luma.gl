@@ -17,3 +17,6 @@ export {
   getHistoPyramid,
   histoPyramidGenerateIndices
 } from './gpgpu/histopyramid/histopyramid';
+
+export {default as GPUPointInPolygon} from './gpgpu/point-in-polygon/gpu-point-in-polygon';
+export {default as CPUPointInPolygon} from './gpgpu/point-in-polygon/cpu-point-in-polygon';
