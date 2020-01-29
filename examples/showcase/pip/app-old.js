@@ -6,7 +6,7 @@ import {isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
 import {getRandomPoints, getRandomPolygon, PolygonModel} from './utils';
 import {CPUPointInPolygon} from '@luma.gl/experimental';
-import {GPUPointInPolygonNew as GPUPointInPolygon} from '@luma.gl/experimental';
+import {GPUPointInPolygon} from '@luma.gl/experimental';
 
 /* eslint-disable max-len */
 const INFO_HTML = `
@@ -88,8 +88,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       filterValueIndexBuffer,
       pointsModel,
       gpuPolygonClip: new GPUPointInPolygon(gl, {textureSize: 512}),
-      cpuPointInPolygon: new CPUPointInPolygon(),
-      polygonModel: new PolygonModel(gl)
+      cpuPointInPolygon: new CPUPointInPolygon()
     };
   }
   /* eslint-enable max-statements */
@@ -104,7 +103,6 @@ export default class AppAnimationLoop extends AnimationLoop {
     filterValueIndexBuffer,
     gpuPolygonClip,
     cpuPointInPolygon,
-    polygonModel,
     tick
   }) {
     if (this.demoNotSupported) {
@@ -113,8 +111,6 @@ export default class AppAnimationLoop extends AnimationLoop {
     clear(gl, {color: [0.25, 0.25, 0.25, 1]});
 
     const polygon = getRandomPolygon();
-
-    polygonModel.update({polygon});
 
     let color;
     if (tick % 20 < 5) {
@@ -130,7 +126,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     pointsModel.draw();
 
-    polygonModel.polygonWireFrameModel.draw({
+    gpuPolygonClip.polygonWireFrameModel.draw({
       uniforms: {color}
     });
   }

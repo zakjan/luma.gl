@@ -3,52 +3,10 @@ import GL from '@luma.gl/constants';
 import {Buffer, Framebuffer, Texture2D, assert} from '@luma.gl/webgl';
 import {Model, Transform} from '@luma.gl/engine';
 import {default as textureFilterModule} from './texture-filter';
+import {default as BuildPolygonTexture} from './build-polygon-texture';
 const TEXTURE_SIZE = 512;
 import * as Polygon from './polygon';
 
-const POLY_TEX_VS = `\
-uniform vec4 boundingBox; //[xMin, xMax, yMin, yMax]
-uniform vec2 size; // [width, height]
-attribute vec2 a_position;
-void main()
-{
-    // [0, 0] -> [width, height]
-    vec2 pos = a_position - boundingBox.xy;
-    pos = pos / size;
-    pos = pos * 2.0 - vec2(1.0);
-    gl_Position = vec4(pos, 0.0, 1.0);
-}
-`;
-
-const POLY_TEX_FS = `\
-void main()
-{
-    gl_FragColor = vec4(1.0);
-}
-`;
-
-const POLY_VS = `\
-precision highp float;
-precision highp int;
-attribute vec2 a_position;
-void main()
-{
-    gl_Position = vec4(a_position, 0.0, 1.0);
-    gl_PointSize = 5.;
-}
-`;
-
-const POLY_FS = `\
-#define ALPHA 1.0
-precision highp float;
-precision highp int;
-uniform vec4 color;
-void main()
-{
-    // gl_FragColor = vec4(vec3(1.0, 1., 0.) * ALPHA, ALPHA);
-    gl_FragColor = color;
-}
-`;
 
 const FILTER_VS = `\
 #version 300 es

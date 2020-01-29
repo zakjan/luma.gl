@@ -1,16 +1,17 @@
 
-const TEXTURE_SIZE = 64;
-// import * as Polygon from './polygon';
-
+import GL from '@luma.gl/constants';
+import {Buffer} from '@luma.gl/webgl';
+import {Model} from '@luma.gl/engine';
 import {getRandom} from '../../utils';
+import * as Polygon from './polygon';
+
 
 const random = getRandom();
-
+const TEXTURE_SIZE = 64;
 const TRIANGLES = [
   [-0.5, -0.5,  0, 0, -0.5, 0.5],
  [0.5, -0.5,  0, 0,  0.5, 0.5]
 ];
-
 const POLYGON = [
   [-0.5, -0.5],  [0, 0], [-0.5, 0.5], [-0.75, 0]
 ]
@@ -28,6 +29,7 @@ export function getRandomPoints(count) {
 
 let random_polygon;
 let random_polygon_counter = 0;
+
 export function getRandomPolygon(size) {
 
   random_polygon_counter++;
@@ -56,4 +58,92 @@ export function getRandomPolygon(size) {
   }
   random_polygon = polygon;
   return polygon;
+}
+
+const POLY_VS = `\
+precision highp float;
+precision highp int;
+attribute vec2 a_position;
+void main()
+{
+    gl_Position = vec4(a_position, 0.0, 1.0);
+    gl_PointSize = 5.;
+}
+`;
+
+const POLY_FS = `\
+#define ALPHA 1.0
+precision highp float;
+precision highp int;
+uniform vec4 color;
+void main()
+{
+    // gl_FragColor = vec4(vec3(1.0, 1., 0.) * ALPHA, ALPHA);
+    gl_FragColor = color;
+}
+`;
+
+export class PolygonModel {
+  constructor(gl, opts) {
+    this.gl = gl;
+
+    this.positionBuffer = new Buffer(gl, {accessor: {type: GL.FLOAT, size: 2}});
+    this.indexBuffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER, accessor: {type: GL.UNSIGNED_SHORT}});
+    this.wireframeBuffer = new Buffer(gl, {accessor: {type: GL.FLOAT, size: 2}});
+
+
+    this.polygonModel = new Model(gl, {
+      id: 'RenderPolygonWireframe',
+      vs: POLY_VS,
+      fs: POLY_FS,
+      drawMode: GL.TRIANGLES,
+      vertexCount: 12,
+      isIndexed: true,
+      debug: true
+    });
+
+     this.polygonWireFrameModel = new Model(gl, {
+      id: 'RenderTriangles',
+      vs: POLY_VS,
+      fs: POLY_FS,
+      drawMode: GL.LINE_LOOP,
+      debug: true
+    });
+
+    // clamp to system max texure-size
+    if (opts) {
+      this.update(opts);
+    }
+  }
+
+  update({polygon, vertexCount, size = 2} = {}) {
+
+    const complexPolygon = Polygon.normalize(polygon, size);
+    vertexCount = vertexCount || Polygon.getVertexCount(complexPolygon, size);
+    const indices = Polygon.getSurfaceIndices(complexPolygon, 2);
+
+    this.positionBuffer.setData(new Float32Array(complexPolygon));
+    this.indexBuffer.setData(new Uint16Array(indices));
+    this.wireframeBuffer.setData(new Float32Array(complexPolygon));
+
+
+
+    this.polygonModel.setProps({
+      attributes: {
+        a_position: this.positionBuffer,
+        indices: this.indexBuffer // key doesn't matter
+      }
+    });
+
+    this.polygonModel.setVertexCount(indices.length); // (vertexCount-1);
+
+    this.polygonWireFrameModel.setProps({
+      attributes: {
+        a_position: this.wireframeBuffer
+      }
+    });
+    this.polygonWireFrameModel.setVertexCount(complexPolygon.length/2);
+
+    return this;
+  }
 }
