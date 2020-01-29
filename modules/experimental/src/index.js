@@ -19,6 +19,7 @@ export {
 } from './gpgpu/histopyramid/histopyramid';
 
 export {default as GPUPointInPolygon} from './gpgpu/point-in-polygon/gpu-point-in-polygon';
+export {default as GPUPointInPolygonNew} from './gpgpu/point-in-polygon/gpu-point-in-polygon-new';
 export {default as BuildPolygonTexture} from './gpgpu/point-in-polygon/build-polygon-texture';
 export {default as textureFilter} from './gpgpu/point-in-polygon/texture-filter';
 

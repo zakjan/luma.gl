@@ -5,7 +5,8 @@ import {AnimationLoop, Model} from '@luma.gl/engine';
 import {isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
 import {getRandomPoints, getRandomPolygon} from './utils';
-import {GPUPointInPolygon, CPUPointInPolygon} from '@luma.gl/experimental';
+import {CPUPointInPolygon} from '@luma.gl/experimental';
+import {GPUPointInPolygonNew as GPUPointInPolygon} from '@luma.gl/experimental';
 
 /* eslint-disable max-len */
 const INFO_HTML = `

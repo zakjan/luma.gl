@@ -1,12 +1,13 @@
 // shader module to perform texture filtering
 
 const vs = `
-uniform vec4 boundingBox;
-uniform vec2 size;
+uniform vec4 boundingBox; //[xMin, xMax, yMin, yMax]
+uniform vec2 size; // [width, height]
+uniform sampler2D filterTexture;
 vec2 textureFilter_filter(vec2 position) {
   vec2 filterValueIndex;
   // [0, 0] -> [width, height]
-  vec2 pos = a_position - boundingBox.xy;
+  vec2 pos = position - boundingBox.xy;
   pos = pos / size;
   // pos = pos * 2.0 - vec2(1.0);
   filterValueIndex.y = float(gl_VertexID);
@@ -20,9 +21,15 @@ vec2 textureFilter_filter(vec2 position) {
 }
 `;
 
-function getUniforms(opts) {
-  const {boundingBox, size} = opts;
-  return {boundingBox, size};
+function getUniforms(opts = {}) {
+  const uniforms = {};
+  if (opts.boundingBox) {
+    uniforms.boundingBox = opts.boundingBox;
+  }
+  if (opts.size) {
+    uniforms.size = opts.size;
+  }
+  return uniforms;
 }
 
 export default {

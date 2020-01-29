@@ -26,9 +26,8 @@ attribute vec2 a_texCoord;
 varying vec2 v_texCoord;
 void main()
 {
-
-    gl_Position = vec4(a_position, 0.0, 1.0);
-    v_texCoord = a_texCoord;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+  v_texCoord = a_texCoord;
 }
 `;
 
@@ -43,7 +42,6 @@ void main()
 {
     gl_FragColor = texture2D(polygonTexture, v_texCoord);
     gl_FragColor.a = 1.0;
-    // gl_FragColor = vec4(v_texCoord, 0., 1.);
 }
 `;
 
