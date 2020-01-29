@@ -6,7 +6,7 @@ import {isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
 import {getRandomPoints, getRandomPolygon, PolygonModel} from './utils';
 import {CPUPointInPolygon} from '@luma.gl/experimental';
-import {GPUPointInPolygonNew as GPUPointInPolygon} from '@luma.gl/experimental';
+import {GPUPointInPolygon} from '@luma.gl/experimental';
 
 /* eslint-disable max-len */
 const INFO_HTML = `
@@ -19,25 +19,19 @@ const INFO_HTML = `
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 const USE_GPU = false;
 const DRAW_VS = `\
-precision highp float;
-precision highp int;
 attribute vec2 a_position;
 attribute vec2 a_filterValueIndex;
 varying vec4 color;
 void main()
 {
+  gl_Position = vec4(a_position, 0.0, 1.0);
+  color = a_filterValueIndex.x > 0. ? vec4(0, 1., 0, 1.) : vec4(1., 0, 0, 1.);
 
-    gl_Position = vec4(a_position, 0.0, 1.0);
-    color = a_filterValueIndex.x > 0. ? vec4(0, 1., 0, 1.) : vec4(1., 0, 0, 1.);
-
-    gl_PointSize = 10.;
+  gl_PointSize = 10.;
 }
 `;
 
 const DRAW_FS = `\
-#define ALPHA 0.9
-precision highp float;
-precision highp int;
 varying vec4 color;
 void main()
 {
