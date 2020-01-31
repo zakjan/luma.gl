@@ -4,7 +4,7 @@ import {Buffer, Framebuffer, clear, Texture2D} from '@luma.gl/webgl';
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
-import {getRandomPolygon} from './utils';
+import {getRandomPolygon} from '../pip/utils';
 import {GPUPointInPolygon, CPUPointInPolygon} from '@luma.gl/experimental';
 import {BuildPolygonTexture} from '@luma.gl/experimental';
 

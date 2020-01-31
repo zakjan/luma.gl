@@ -21,10 +21,22 @@ const USE_GPU = false;
 const DRAW_VS = `\
 attribute vec2 a_position;
 attribute vec2 a_filterValueIndex;
+uniform vec2 bbOrgin;
+uniform vec2 bbSize;
 varying vec4 color;
 void main()
 {
-  gl_Position = vec4(a_position, 0.0, 1.0);
+
+  // [L, B] : [W, H] =>  [0 , 0] -> [W, H]
+  vec2 pos = a_position - bbOrgin;
+  // [0 , 0] -> [1, 1]
+  pos = pos / bbSize;
+  // [0 , 0] -> [2, 2]
+  pos = pos * vec2(2.);
+  // [-1 , -1] -> [1, 1]
+  pos = pos - vec2(1.);
+
+  gl_Position = vec4(pos, 0.0, 1.0);
   color = a_filterValueIndex.x > 0. ? vec4(0, 1., 0, 1.) : vec4(1., 0, 0, 1.);
 
   gl_PointSize = 10.;
@@ -38,6 +50,10 @@ void main()
     gl_FragColor = color;
 }
 `;
+
+const ORIGIN = [-10, -100]; // [-1, -1]; //[10, 100];
+const SIZE = [50, 50]; // [2, 2]; // [50, 50];
+const bbox = [ORIGIN[0], ORIGIN[1], ORIGIN[0] + SIZE[0], ORIGIN[1] + SIZE[1]];
 
 const NUM_INSTANCES = 1000;
 const log = new Log({id: 'transform'}).enable();
@@ -56,7 +72,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
 
     // -- Initialize data
-    const {flatArray, pointsArray} = getRandomPoints(NUM_INSTANCES);
+    const {flatArray, pointsArray} = getRandomPoints(NUM_INSTANCES, bbox);
 
     const positionBuffer = new Buffer(gl, flatArray);
 
@@ -73,6 +89,10 @@ export default class AppAnimationLoop extends AnimationLoop {
         a_position: positionBuffer,
         a_filterValueIndex: filterValueIndexBuffer
       },
+      uniforms: {
+        bbOrgin: ORIGIN,
+        bbSize: SIZE
+      },
       debug: true
     });
 
@@ -83,7 +103,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       pointsModel,
       gpuPolygonClip: new GPUPointInPolygon(gl, {textureSize: 512}),
       cpuPointInPolygon: new CPUPointInPolygon(),
-      polygonModel: new PolygonModel(gl)
+      polygonModel: new PolygonModel(gl, {uniforms: {bbOrgin: ORIGIN, bbSize: SIZE}})
     };
   }
   /* eslint-enable max-statements */
@@ -106,7 +126,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
     clear(gl, {color: [0.25, 0.25, 0.25, 1]});
 
-    const polygon = getRandomPolygon();
+    const polygon = getRandomPolygon(null, bbox);
 
     polygonModel.update({polygon});
 

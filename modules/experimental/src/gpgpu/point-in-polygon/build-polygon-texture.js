@@ -10,7 +10,7 @@ uniform vec2 size; // [width, height]
 attribute vec2 a_position;
 void main()
 {
-    // [0, 0] -> [width, height]
+    // translate from bbox to NDC
     vec2 pos = a_position - boundingBox.xy;
     pos = pos / size;
     pos = pos * 2.0 - vec2(1.0);
@@ -86,6 +86,7 @@ export default class BuildPolygonTexture {
     const complexPolygon = Polygon.normalize(polygon, size);
     vertexCount = vertexCount || Polygon.getVertexCount(complexPolygon, size);
     const boundingBox = getBoundingBox(complexPolygon, vertexCount);
+    console.log(`boundingBox: ${boundingBox}`);
 
     const bbSize = [boundingBox[2] - boundingBox[0], boundingBox[3] - boundingBox[1]];
     this.boundingBox = boundingBox;
