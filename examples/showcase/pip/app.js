@@ -4,7 +4,7 @@ import {Buffer, Framebuffer, clear, Texture2D} from '@luma.gl/webgl';
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
-import {getRandomPoints, getRandomPolygon, PolygonModel} from './utils';
+import {getRandomPoints, getRandomPolygon, PolygonModel, getRandomPolygons} from './utils';
 import {CPUPointInPolygon} from '@luma.gl/experimental';
 import {GPUPointInPolygon} from '@luma.gl/experimental';
 
@@ -126,20 +126,23 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
     clear(gl, {color: [0.25, 0.25, 0.25, 1]});
 
-    const polygon = getRandomPolygon(null, bbox);
+    let polygon; // = getRandomPolygon(null, bbox);
+    let polygons = getRandomPolygons(null, bbox);
 
-    polygonModel.update({polygon});
+    polygonModel.update({polygon, polygons});
 
     let color;
-    if (tick % 20 < 5) {
-      gpuPolygonClip.update({polygon});
+    if (tick % 50 < 25) {
+      gpuPolygonClip.update({polygon, polygons});
       gpuPolygonClip.run({positionBuffer, filterValueIndexBuffer, pointCount: NUM_INSTANCES});
       color = [1, 1, 0, 1];
+      console.log('GPU');
     } else {
-      cpuPointInPolygon.update({polygon});
+      cpuPointInPolygon.update({polygon, polygons});
       const {filterValueIndexArray} = cpuPointInPolygon.run({points: pointsArray});
       filterValueIndexBuffer.setData(filterValueIndexArray);
       color = [0, 1, 1, 1];
+      console.log('CPU');
     }
 
     pointsModel.draw();

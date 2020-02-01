@@ -4,7 +4,7 @@ import {Buffer, Framebuffer, clear, Texture2D} from '@luma.gl/webgl';
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
-import {getRandomPolygon} from '../pip/utils';
+import {getRandomPolygon, getRandomPolygons} from '../pip/utils';
 import {GPUPointInPolygon, CPUPointInPolygon} from '@luma.gl/experimental';
 import {BuildPolygonTexture} from '@luma.gl/experimental';
 
@@ -82,10 +82,11 @@ export default class AppAnimationLoop extends AnimationLoop {
     polygonModel
   }) {
     clear(gl, {color: [0.25, 0.25, 0.25, 1]});
-    const polygon = getRandomPolygon();
+    // const polygon = getRandomPolygon();
+    const polygons = getRandomPolygons(4);
 
 
-    const {polygonTexture} = textureBuilder.build({polygon});
+    const {polygonTexture} = textureBuilder.build({polygons});
 
     polygonModel.draw({
       uniforms: {polygonTexture}

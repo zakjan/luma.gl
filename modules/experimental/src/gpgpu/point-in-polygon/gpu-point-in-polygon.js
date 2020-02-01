@@ -38,9 +38,9 @@ export default class GPUPolygonClip {
     }
   }
 
-  update({polygon, size = 2, vertexCount} = {}) {
+  update({polygon, size = 2, vertexCount, polygons} = {}) {
 
-    this.buidPolygonTexture.build({polygon, vertexCount});
+    this.buidPolygonTexture.build({polygon, vertexCount, polygons});
 
   }
 

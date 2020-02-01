@@ -35,8 +35,28 @@ export function getRandomPoints(count, boundingBox = [-1, -1, 1, 1]) {
 
 let random_polygon;
 let random_polygon_counter = 0;
+let random_polygons;
+let random_polygons_counter = 0;
 
-export function getRandomPolygon(size = null, boundingBox = [-1, -1, 1, 1], bboxOffsetScale = 0.25) {
+
+export function getRandomPolygons(size = null, boundingBox = [-1, -1, 1, 1], bboxOffsetScale = 0.25) {
+  // produces two polygons
+  random_polygons_counter++;
+  if (random_polygons && random_polygons_counter % 100 !== 0) {
+      return random_polygons;
+  }
+
+  const xHalfSize = (boundingBox[2] - boundingBox[0])/2;
+  const bbox1 = [boundingBox[0], boundingBox[1], boundingBox[2] - xHalfSize, boundingBox[3]];
+  const p1 = getRandomPolygon(size, bbox1, bboxOffsetScale, true);
+  const bbox2 = [boundingBox[0] + xHalfSize, boundingBox[1], boundingBox[2], boundingBox[3]];
+  const p2 = getRandomPolygon(size, bbox2, bboxOffsetScale, true);
+  random_polygons = [p1, p2];
+  return random_polygons;
+}
+
+
+export function getRandomPolygon(size = null, boundingBox = [-1, -1, 1, 1], bboxOffsetScale = 0.25, ignoreCacheCheck = false) {
 
   const bbSize = Math.min(boundingBox[2] - boundingBox[0], boundingBox[3] - boundingBox[1]);
   const radiusStep = bbSize * (1 - bboxOffsetScale) / 2;
@@ -44,9 +64,11 @@ export function getRandomPolygon(size = null, boundingBox = [-1, -1, 1, 1], bbox
   const originYOffset = boundingBox[1] + radiusStep;
 
 
-  random_polygon_counter++;
-  if (random_polygon && random_polygon_counter % 100 !== 0) {
-      return random_polygon;
+  if (!ignoreCacheCheck) {
+    random_polygon_counter++;
+    if (random_polygon && random_polygon_counter % 100 !== 0) {
+        return random_polygon;
+    }
   }
 
   size = size || 3 + Math.floor(random() * 50);
@@ -75,7 +97,7 @@ export function getRandomPolygon(size = null, boundingBox = [-1, -1, 1, 1], bbox
     polygon.push([pX + originXOffset, pY + originYOffset]);
   }
   random_polygon = polygon;
-  console.log(`boundingBox: ${boundingBox} radiusStep: ${radiusStep} originXOffset: ${originXOffset} originYOffset: ${originXOffset}, polyBox: ${pXMin} ${pYMin} ${pXMax} ${pYMax}`);
+  // console.log(`boundingBox: ${boundingBox} radiusStep: ${radiusStep} originXOffset: ${originXOffset} originYOffset: ${originXOffset}, polyBox: ${pXMin} ${pYMin} ${pXMax} ${pYMax}`);
   return polygon;
 }
 
@@ -148,11 +170,28 @@ export class PolygonModel {
     }
   }
 
-  update({polygon, vertexCount, size = 2, bobx} = {}) {
+  update({polygon, polygons, vertexCount, size = 2, bobx} = {}) {
 
-    const complexPolygon = Polygon.normalize(polygon, size);
+    let complexPolygon;
+    let indices;
+
+    if (polygons) {
+      complexPolygon = [];
+      indices = [];
+      let count = 0;
+      polygons.forEach(p => {
+        const vertices = Polygon.normalize(p, size);
+        complexPolygon.push(...vertices);
+        count += vertices.length/2;
+        const tIndices = Polygon.getSurfaceIndices(vertices, 2).map(x => x + count);
+        indices.push(...tIndices);
+      })
+    } else {
+      complexPolygon = Polygon.normalize(polygon, size);
+      indices = Polygon.getSurfaceIndices(complexPolygon, 2);
+    }
+
     vertexCount = vertexCount || Polygon.getVertexCount(complexPolygon, size);
-    const indices = Polygon.getSurfaceIndices(complexPolygon, 2);
 
     this.positionBuffer.setData(new Float32Array(complexPolygon));
     this.indexBuffer.setData(new Uint16Array(indices));

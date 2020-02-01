@@ -80,13 +80,30 @@ export default class BuildPolygonTexture {
     }
   }
 
-  build({polygon, size = 2, vertexCount} = {}) {
+  build({polygon, size = 2, vertexCount, polygons} = {}) {
     const {textureSize} = this;
 
-    const complexPolygon = Polygon.normalize(polygon, size);
+    let complexPolygon;
+    let indices;
+    if (polygons) {
+      complexPolygon = [];
+      indices = [];
+      let count = 0;
+      polygons.forEach(p => {
+        const vertices = Polygon.normalize(p, size);
+        complexPolygon.push(...vertices);
+        const tIndices = Polygon.getSurfaceIndices(vertices, 2).map(x => x + count);
+        count += vertices.length/2;
+        indices.push(...tIndices);
+      })
+    } else {
+      complexPolygon = Polygon.normalize(polygon, size);
+      indices = Polygon.getSurfaceIndices(complexPolygon, 2);
+    }
+
     vertexCount = vertexCount || Polygon.getVertexCount(complexPolygon, size);
     const boundingBox = getBoundingBox(complexPolygon, vertexCount);
-    console.log(`boundingBox: ${boundingBox}`);
+    // console.log(`boundingBox: ${boundingBox}`);
 
     const bbSize = [boundingBox[2] - boundingBox[0], boundingBox[3] - boundingBox[1]];
     this.boundingBox = boundingBox;
@@ -114,8 +131,7 @@ export default class BuildPolygonTexture {
 
     this.positionBuffer.setData(new Float32Array(complexPolygon));
     // Should be enough to index into polygon vertex buffer (max vertex count will be 64K)
-    const indices = new Uint16Array(Polygon.getSurfaceIndices(complexPolygon, 2));
-    this.indexBuffer.setData(indices);
+    this.indexBuffer.setData(new Uint16Array(indices));
 
     this.polyTextureTransform.update({
       elementCount: indices.length,
