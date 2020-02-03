@@ -1,17 +1,19 @@
-# RFC: GPU Accelerated Polygon Clipping.
+# RFC: GPU Accelerated Polygon Clipping
 
 * Authors: Ravi Akkenapally
-* Date: January 14, 2020
+* Date: Feb 03, 2020
 * Status: **Draft**
-* POC: TODO
 
 ## Overview
 
-The main problem this RFC is trying to solve is, filtering data to a polygon, and it is also referred as PIP (Point In Polygon) test. There has been lot of research work recently, to accelerate the PIP test using GPU.
+Finding weather a point resides inside a polygon or not (in 2D space) has complexity Of `(N * M)`,  where `N` is the number of points and `M` is number of polygon edges. When performing this on large number of points takes a long time. This RFC proposes a GPU accelerated approach that can be implemented within `WebGL` limitation.
 
 ### Existing Research Work
 
-Following is the list of papers I was able to find and explored :
+Finding a point inside a polygon or not is also referred as PIP test. There has been lot of research work recently, to accelerate the PIP test using GPU.
+
+
+Following is the list of papers I found and explored :
 
 1. Speeding up Large-Scale Point-in-Polygon Test Based Spatial Join on GPUs ([Paper](http://www-cs.ccny.cuny.edu/~jzhang/papers/bigspaital_cr.pdf))
 
@@ -23,38 +25,29 @@ Following is the list of papers I was able to find and explored :
 
 All of above work uses more advanced Graphics APIs (such as OpenGL Compute Shaders, CUDA, SSBO, etc) and or not supported either by WebGL1 or WebGL2. This RFC proposes a method that can be implemented with in WebGL1 and WebGL2 limitations.
 
+
 ## Proposed Approach
 
-A texture based filtering can be implemented to perform PIP test on GPU. The idea is, user provided polygon(s) is triangulated and rendered to an offline frame buffer. And then given points are run through transform feedback loop, and each point is translated into the texture space above texture is sampled, result of this sample determines if the point is inside or outside the polygon. The texture size can be configured to control precession/speed. Bigger texture size has better precession while smaller texture size will have better speed.
+A texture based filtering can be implemented to perform PIP test on GPU. The idea is, user provided polygon(s) is triangulated and rendered to an offline frame buffer. And then given points are run through transform feedback loop, and each point is translated into the texture space and above texture is sampled, result of this sample determines if the point is inside or outside the polygon. The texture size can be configured to control precession/speed. Bigger texture size has better precession while smaller texture size will have better speed.
 
 
 ## Proposed New Components
 
-### bboxFilter (ShaderModule)
+### `texturefilter` (ShaderModule)
 
-A new shader module is defined to perform, clipping of input points to a given bounding box.
-
-- Uniforms:
-   - bboxOrigin (vec2)
-   - bboxSize (vec2)
-- Vs Function:
-  - vec2 isWithInBBox(vec2 point) : returns [flag, pointIndex]
-
-### textureFilter (ShaderModule)
-
-Requires `bboxFilter`. Provides a vertex shader function, the performs a sample instruction to determine if the point is with in the mask defined by texture or not.
-
-Forllowing uniforms are needed inaddtion to uniforms needed by `bboxFilter` module
+Provides shader functionality, for transforming input point to texture space and sample the texture to determine if the point is inside or outside the region defined by the texture. When performing polygon clipping, this texture is created by rendering polygons to it.
 
 - Uniforms:
-   - textureMask (sampler2D)
-
+   - `bboxOrigin` (vec2)  // origin of the bounding box
+   - `bboxSize` (vec2)  // Sizes in X and Y directions of the bounding box
+   - `maskTexture` (sampler2D) // Texture created by rendering polygons
 - VS Function:
-  - vec2 isWithInTextureMask(vec2 point): returns [flag, pointIndex]
+     - `vec3 isWithInTextureMask(vec2 point)`: returns [flag, id, pointIndex]
+
 
 ### GPUPolygonFilter (JS Class) (WebGL2 only)
 
-Class that builds a texture mask from given set of polygons and performs transform feedback loop on given set of points and generates the results.
+Class that builds a texture mask from given set of polygons, performs transform feedback loop on given set of points and generates the results. It internally uses `texturefilter` shader module.
 
 #### Methods
 
@@ -69,7 +62,7 @@ Constructor has following arguments, it constructs required objects such as `Tex
  - `polygon` (Array) : A simple or complex polygon in following format:
 
   Simple polygon: [[x1, y1], [x2, y2], ...]
-  Complex plygon (with hole) :
+  Complex polygon (with hole) :
     [                                           
       [[x1, y1], [x2, y2], ...], // outer ring
       [[hx1, hy1], [hx2, hy2], ...] // hole
@@ -77,11 +70,11 @@ Constructor has following arguments, it constructs required objects such as `Tex
 
 ##### update(opts)
 
-`opts` object is same as `opts` argument of constructor. Once object is constructed, plygons can be updated.
+`opts` object is same as `opts` argument of constructor. Once object is constructed, polygons can be updated.
 
 ##### run(opts)
 
-* `opts.positionBuffer` (Buffer) : `Buffer` object containing position data of input points.
+* `opts.positionBuffer` (Buffer) : `Buffer` object containing position data of input points, must contain X and Y values.
 * `opts.count` (Integer) : Count of number of points to be processed.
 * `opts.resultBuffer` (Buffer): `Buffer` object where results will be stored. It should hold at least 3 elements (vec3) for each input point. Once this method is completed this buffer will contain a vec3 [`flag`, `id`, `index`]. Each element (vec3) of this buffer contains the result of corresponding point (vec2) from the `positionBuffer`.
  - `flag` : 0 if the point is outside the polygon, 1 if inside any polygon.
@@ -126,109 +119,15 @@ polygonFilter.run({positionBuffer, count, resultBuffer});
 
 ```
 
+## WebGL1 Support
+
+Praposed above new class `GPUPolygonFilter` is WebGL2 only. For WebGL1 applications, above shader module `textureFilter` can be used to and PIP test can be performed with in the application vertex shader. Based on the result vertices can be either discarded (in fragment shader) or any of the attribute (such as color) can be changed as per required visual effect.
 
 
+## Future Work
 
+Result of the PIP test returned by `GPUPolygonFilter` calss resides in a `WebGLBuffer` object. Reading this `Buffer` object involves CPU and GPU sync. For a GPU bound application this causes a bottleneck, as it requires CPU and GPU sync. To avoid this, another `Transform Feedback` can be run on this Buffer object to produce the index buffer of point that have passed PIP test.
 
-==============
-
-### PolygonTexture
-
-Axis aligned bounding box of polygons is first computed. A Framebuffer is created that has same aspect reatio as bounding box and it is cleared with a custom clear color (can be black). User provided polygons are triangulated and their positions are normalized to bounding box and are rendered to above offline Framebuffer using a custom color (we can just use one of RGB channels).
-
-### Filtering
-
-When rendering user provided data, for each data element, its positions is transformed into same space that above texture is generated and it position (XY) is normalized to a [0, 1] range and then we first perform trivial check agains bounding box (for range [0, 1]) to clip agains bounding box and then perform texture sample from above texture. The result gives whether the object is in the polygon or not.
-
-## Problem Classifications and proposed API
-
-### Filtering points
-
-We can perform a point in polygon test of each object and discard the rendering if test fails. One are more layer can be marked to generate the filter texture and one or more layers can be marked to use this texture as a mask for filtering. In layer's vertex shader, a texture sample is performed to determine if the object is inside or outside.
-
-Entire process of filtering can be divided into two steps, 1. Generation of filter texture and 2. performing actual filtering.
-
-* API : Following new components will be added
-
-#### GeoFilterEffect
-
-This effect generates the required filter texture. Internally it creates a new render pass to render data in world space to a offline texture.
-
-During pre render pass:
-- All layers are processed, and if a layer has 'geoFilterMask' prop set, a bounding box of its data is calculated (optionally can be provided by the layer).
-- All above bounding boxes are merged at each step and used to build the texture mask.
-- This effect class is responsible for providing following uniforms that will be consumed by following shader module 'TextureFilterModule'
-
-1. `textureTransform` (Array, [xTranslation, yTranslation, xScale, yScale]) : used to transform each data point into required clipping space.
-2. `maskTexture` (Texture2D) : texture that is sampled to determine if a given point is inside or outside.
-
-#### TextureFilterModule
-
-A new shader module is added to perform sampling from the texture and filter the points, defines following shader functions:
-
-- `geoFilter_setValue` : Takes, object's world positions, transforms it to mask texture space, performs sampling and sets `geoFilter_value` to either 0 (if outside the defined region) or to and id ( >= 1).
-
-Also this module defined following shader injects/hooks, that can be used by layer shader to perform geo filtering.
-
-- `vs:#main-start` : To perform sampling and set `getoFilter_value`.
-- `vs:DECKGL_FILTER_SIZE` : To set object size to 0 if the object is filteredout.
-- `fs:DECKGL_FILTER_COLOR` : To discard the fragments if filter value is 0. This can also be used update the color of the fragment if it is inside the region.
-
-
-Sample code to perform filtering on a `ScatterplotLayer` to a `SolidPolygonLayer` that is rendering a complex polygon.
-
-```js
-import DeckGL from '@deck.gl/react';
-import {GeoFilterEffect} from '@deck.gl/core';
-
-const GEO_FILTER_ID = 'geo-filter-id-1'
-
-const filterEffect = new GeoFilterEffect({id: GEO_FILTER_ID, precession: 0.8});
-
-// ...
-
-const App = (data) => (
-  <DeckGL
-    layers={[
-      // Layer that generates the mask
-      new SolidPolygonLayer({
-        // Complex polygon with one hole
-        data: [
-              [[0, 0], [0, 2], [2, 2], [2, 0], [0, 0]],
-              [[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]
-            ],
-        visible: false
-        geoFilterMask: GEO_FILTER_ID
-        // ...
-      })
-      // Layer that gets filtered out
-      new ScatterplotLayer({
-        data,
-        geoFilter: GEO_FILTER_ID
-      })
-    ]}
-  >
-  // ... map
-  </DeckGL>
-);
-
-```
-
-This type of filtering is applicable for layers such as `ScatterplotLayer`, `GridLayer`, etc
-
-### Filtering non point primitives
-
-When filtering non point primitive, such as `lines`, `arcs` and `polygons` etc, filtering can be done at fragment shader. API for this featue is same as above, except filtering shader instructions are injected into fragment shader instead of vertex shader. This decession is done at static time, by updating layer's fragment shader with proper shader hooks.
-
-This type of filtering is applicable for layers such as `PathLayer`, `PolygonLayer`, etc
-
-### Giving filtering results to applications
-
-Above two solutions, perform filtering and render the data, but do not give filtering results to applications. In most cases, when performing geofencing, application would also like to access filtered data, to perform other calculations or process it further. We can support that by developing module, which performs filtering as above, but uses `Transform Feedback` to provide results back to the application. This result will be a `Buffer`, with same size as number of objects, and for each object it will contain 0 or 1, to indicate whether the object is filtered or not. This way application can only pass, filtered data back to the deck.gl and also use it for further processing.
-
-* NOTE: This approach would require support for `WebGL2`.
-
-* API: A module, built using `Transform` class, that takes object position values and polygons, and output being a `Buffer` containing a value for each object, indicating if it is filtered or not. We can also provide a reduced list of indices that are filtered out, which can be used as index buffer (to avoid filtering of objects on CPU and re uploading data to GPU).
 
 ## Performance
 
