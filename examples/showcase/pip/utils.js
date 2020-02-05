@@ -52,6 +52,18 @@ export function getRandomPolygons(size = null, boundingBox = [-1, -1, 1, 1], bbo
   const bbox2 = [boundingBox[0] + xHalfSize, boundingBox[1], boundingBox[2], boundingBox[3]];
   const p2 = getRandomPolygon(size, bbox2, bboxOffsetScale, true);
   random_polygons = [p1, p2];
+
+  // HACK to test clamp-to-edge doesn't work to aviod checking against [0, 1] range
+  // const xMin = bbox1[0];
+  // const yMin = bbox1[1];
+  // const xMax = bbox1[2];
+  // const yMax = bbox1[3];
+  // random_polygons = [
+  //   [[xMin, yMin], [xMin, yMax], [xMax, yMax], [xMax, yMin]]
+  //   // [xMin, yMin], [xMin, yMax], [xMax, yMax], [xMax, yMin]
+  // ];
+
+
   return random_polygons;
 }
 
