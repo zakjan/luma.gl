@@ -25,8 +25,8 @@ export default class GPUPolygonClip {
       id: 'filter transform',
       vs: FILTER_VS,
       modules: [textureFilterModule],
-      varyings: ['filterValueIndex']
-      // debug: true
+      varyings: ['filterValueIndex'],
+      debug: true
     });
 
     this.buidPolygonTexture = new BuildPolygonTexture(gl, {textureSize});
@@ -55,12 +55,14 @@ export default class GPUPolygonClip {
       elementCount: pointCount
     });
     const {polygonTexture, boundingBox, bbSize} = this.buidPolygonTexture;
+    const [xMin, yMin, xMax, yMax] = boundingBox;
 
     this.filterTransform.run({
       uniforms: {
-        filterTexture: polygonTexture,
-        boundingBox,
-        size: bbSize
+        textureFilter_texture: polygonTexture,
+        textureFilter_bbOriginSize: [xMin, yMin, xMax - xMin, yMax - yMin]
+        // boundingBox,
+        // size: bbSize
       }
     });
   }

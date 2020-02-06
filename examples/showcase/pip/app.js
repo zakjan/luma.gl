@@ -132,16 +132,16 @@ export default class AppAnimationLoop extends AnimationLoop {
     polygonModel.update({polygon, polygons});
 
     let color;
-    if (tick % 50 < 25) {
+    if (tick % 500 < 250) {
       gpuPolygonClip.update({polygon, polygons});
       gpuPolygonClip.run({positionBuffer, filterValueIndexBuffer, pointCount: NUM_INSTANCES});
-      color = [1, 1, 0, 1];
+      color = [1, 1, 1, 1];
       console.log('GPU');
     } else {
       cpuPointInPolygon.update({polygon, polygons});
       const {filterValueIndexArray} = cpuPointInPolygon.run({points: pointsArray});
       filterValueIndexBuffer.setData(filterValueIndexArray);
-      color = [0, 1, 1, 1];
+      color = [0, 0, 0, 1];
       console.log('CPU');
     }
 

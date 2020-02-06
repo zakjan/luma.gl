@@ -5,14 +5,13 @@ const TEXTURE_SIZE = 512;
 import * as Polygon from './polygon';
 
 const POLY_TEX_VS = `\
-uniform vec4 boundingBox; //[xMin, xMax, yMin, yMax]
-uniform vec2 size; // [width, height]
+uniform vec4 boundingBoxOriginSize; //[xMin, yMin, xSize, ySize]
 attribute vec2 a_position;
 void main()
 {
     // translate from bbox to NDC
-    vec2 pos = a_position - boundingBox.xy;
-    pos = pos / size;
+    vec2 pos = a_position - boundingBoxOriginSize.xy;
+    pos = pos / boundingBoxOriginSize.zw;
     pos = pos * 2.0 - vec2(1.0);
     gl_Position = vec4(pos, 0.0, 1.0);
 }
@@ -58,7 +57,9 @@ export default class BuildPolygonTexture {
       mipmaps: false,
       parameters: {
         [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
-        [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
+        [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+        [GL.TEXTURE_WRAP_S]: gl.CLAMP_TO_EDGE,
+        [GL.TEXTURE_WRAP_T]: gl.CLAMP_TO_EDGE
       }
     });
 
@@ -69,8 +70,8 @@ export default class BuildPolygonTexture {
       vs: POLY_TEX_VS,
       fs: POLY_TEX_FS,
       drawMode: GL.TRIANGLES,
-      isIndexed: true
-      // debug: true
+      isIndexed: true,
+      debug: true
     });
     this.positionBuffer = new Buffer(gl, {accessor: {type: GL.FLOAT, size: 2}});
     this.indexBuffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER, accessor: {type: GL.UNSIGNED_SHORT}});
@@ -141,12 +142,14 @@ export default class BuildPolygonTexture {
         indices: this.indexBuffer // key doesn't matter
       },
     });
+    const [xMin, yMin, xMax, yMax] = boundingBox;
 
     this.polyTextureTransform.run({
       uniforms: {
-        boundingBox,
-        size: bbSize
+        boundingBoxOriginSize: [xMin, yMin, xMax - xMin, yMax - yMin]
+        // size: bbSize
       }
+//      moduleSettings: {boundingBox}
     });
 
     const {polygonTexture, indexBuffer, positionBuffer} = this;
