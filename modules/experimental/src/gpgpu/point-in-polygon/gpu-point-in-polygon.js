@@ -58,12 +58,11 @@ export default class GPUPolygonClip {
     const [xMin, yMin, xMax, yMax] = boundingBox;
 
     this.filterTransform.run({
-      uniforms: {
-        textureFilter_texture: polygonTexture,
-        textureFilter_bbOriginSize: [xMin, yMin, xMax - xMin, yMax - yMin]
-        // boundingBox,
-        // size: bbSize
-      }
+      // uniforms: {
+      //   textureFilter_texture: polygonTexture,
+      //   textureFilter_bbOriginSize: [xMin, yMin, xMax - xMin, yMax - yMin]
+      // }
+      moduleSettings: {boundingBox, texture: polygonTexture}
     });
   }
 }

@@ -27,7 +27,7 @@ function getUniforms(opts = {}) {
     uniforms.textureFilter_bbOriginSize = [xMin, yMin, xMax - xMin, yMax - yMin];
   }
   if (opts.texture) {
-    uniforms.textureFilter_texture = texture;
+    uniforms.textureFilter_texture = opts.texture;
   }
   return uniforms;
 }
