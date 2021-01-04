@@ -1,9 +1,12 @@
 export default `\
 
-uniform float lighting_uAmbient;
-uniform float lighting_uDiffuse;
-uniform float lighting_uShininess;
-uniform vec3  lighting_uSpecularColor;
+
+uniform PhongLighting {
+  float lighting_uAmbient;
+  float lighting_uDiffuse;
+  float lighting_uShininess;
+  vec3  lighting_uSpecularColor;
+};
 
 vec3 lighting_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 view_direction, vec3 normal_worldspace, vec3 color) {
     vec3 halfway_direction = normalize(light_direction + view_direction);

@@ -55,11 +55,13 @@ const vs = `\
 ${common}
 
 // Unprefixed uniforms
-uniform mat4 modelMatrix;
-uniform mat4 viewMatrix;
-uniform mat4 projectionMatrix;
-uniform mat4 viewProjectionMatrix;
-uniform vec3 cameraPositionWorld;
+uniform Project {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+  mat4 viewProjectionMatrix;
+  vec3 cameraPositionWorld;
+};
 
 struct World {
   vec3 position;

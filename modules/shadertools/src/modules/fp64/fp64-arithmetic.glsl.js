@@ -19,7 +19,9 @@
 // THE SOFTWARE.
 
 export default `\
-uniform float ONE;
+uniform FP64 {
+  float ONE;
+};
 
 /*
 About LUMA_FP64_CODE_ELIMINATION_WORKAROUND

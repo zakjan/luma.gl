@@ -34,10 +34,12 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
 }
 
 const vs = `\
-uniform bool picking_uActive;
-uniform bool picking_uAttribute;
-uniform vec3 picking_uSelectedColor;
-uniform bool picking_uSelectedColorValid;
+uniform Picking {
+  bool picking_uActive;
+  bool picking_uAttribute;
+  vec3 picking_uSelectedColor;
+  bool picking_uSelectedColorValid;
+};
 
 out vec4 picking_vRGBcolor_Avalid;
 
@@ -86,9 +88,12 @@ void picking_setPickingAttribute(vec3 value) {
 `;
 
 const fs = `\
-uniform bool picking_uActive;
-uniform vec3 picking_uSelectedColor;
-uniform vec4 picking_uHighlightColor;
+uniform Picking {
+  bool picking_uActive;
+  bool picking_uAttribute;
+  vec3 picking_uSelectedColor;
+  vec4 picking_uHighlightColor;
+};
 
 in vec4 picking_vRGBcolor_Avalid;
 

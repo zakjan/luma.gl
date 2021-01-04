@@ -9,7 +9,9 @@
 
 // Do a 9x9 bilateral box filter
 const fs = `\
-uniform float strength;
+uniform Denoise {
+  float strength;
+};
 
 vec4 denoise_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   float adjustedExponent = 3. + 200. * pow(1. - strength, 4.);

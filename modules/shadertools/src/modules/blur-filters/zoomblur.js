@@ -9,8 +9,10 @@
 import random from '../utils/random';
 
 const fs = `
-uniform vec2 center;
-uniform float strength;
+uniform ZoomBlur {
+  vec2 center;
+  float strength;
+};
 
 vec4 zoomBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec4 color = vec4(0.0);

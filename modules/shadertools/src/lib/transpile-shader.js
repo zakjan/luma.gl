@@ -14,6 +14,19 @@ export default function transpileShader(source, targetGLSLVersion, isVertex) {
 
 const FS_OUTPUT_REGEX = /^[ \t]*out[ \t]+vec4[ \t]+(\w+)[ \t]*;\s+/m;
 
+// uniform BrightnessContrast {
+//  float brightness;
+//  float contrast;
+//} brightnessContrast;
+// => $1=BrightnessContrast, $2=float brightness; float contrast;) $3=brightnessContrast;
+
+const UNIFORM_BLOCK_REGEX = /.*uniform\s+(\S+)\s+{([\s\S]*?)}\s*(.*?);/gm;
+const UNIFORM_BLOCK_TO_GLSL100 = (matches, BlockName, members, instanceName) => {
+  const transpiled = members.replace(/(.*?);/gm, 'uniform $1;');
+  console.error(transpiled);
+  return transpiled;
+}
+
 function convertVertexShaderTo300(source) {
   return source
     .replace(/^(#version[ \t]+(100|300[ \t]+es))?[ \t]*\n/, '#version 300 es\n')
@@ -39,6 +52,7 @@ function convertVertexShaderTo100(source) {
   // /gm - treats each line as a string, so that ^ matches after newlines
   return source
     .replace(/^#version[ \t]+300[ \t]+es/, '#version 100')
+    .replace(UNIFORM_BLOCK_REGEX, UNIFORM_BLOCK_TO_GLSL100)
     .replace(/^[ \t]*in[ \t]+(.+;)/gm, 'attribute $1')
     .replace(/^[ \t]*out[ \t]+(.+;)/gm, 'varying $1')
     .replace(/\btexture\(/g, 'texture2D(')
@@ -49,6 +63,7 @@ function convertFragmentShaderTo100(source) {
   // /gm - treats each line as a string, so that ^ matches after newlines
   source = source
     .replace(/^#version[ \t]+300[ \t]+es/, '#version 100')
+    .replace(UNIFORM_BLOCK_REGEX, UNIFORM_BLOCK_TO_GLSL100)
     .replace(/^[ \t]*in[ \t]+/gm, 'varying ')
     .replace(/\btexture\(/g, 'texture2D(')
     .replace(/\btextureLod\(/g, 'texture2DLodEXT(');

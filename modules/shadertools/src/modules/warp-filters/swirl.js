@@ -10,9 +10,11 @@
 import warp from './warp';
 
 const fs = `\
-uniform float radius;
-uniform float angle;
-uniform vec2 center;
+uniform Swirl {
+  float radius;
+  float angle;
+  vec2 center;
+};
 
 vec2 swirl_warp(vec2 coord, vec2 texCenter) {
   coord -= texCenter;

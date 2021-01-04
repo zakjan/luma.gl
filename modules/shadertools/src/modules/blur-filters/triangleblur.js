@@ -8,8 +8,10 @@
 import random from '../utils/random';
 
 const fs = `\
-uniform float radius;
-uniform vec2 delta;
+uniform TriangleBlur {
+  float radius;
+  vec2 delta;
+};
 
 vec4 triangleBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec2 adjustedDelta = delta * radius / texSize;

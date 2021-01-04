@@ -7,8 +7,10 @@
 import random from '../utils/random';
 
 const fs = `\
-uniform float radius;
-uniform vec2 delta;
+uniform EdgeWork {
+  float radius;
+  vec2 delta;
+};
 
 vec4 edgeWork_sampleColor1(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec2 relativeDelta = radius * delta / texSize;

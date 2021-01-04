@@ -9,7 +9,9 @@
  *                 instead of black ones.
  */
 const fs = `\
-uniform float strength;
+uniform Ink {
+  float strength;
+};
 
 vec4 ink_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec2 dx = vec2(1.0 / texSize.x, 0.0);

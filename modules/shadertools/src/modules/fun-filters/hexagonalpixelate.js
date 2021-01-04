@@ -7,8 +7,10 @@
  * @param scale   The width of an individual tile, in pixels.
  */
 const fs = `\
-uniform vec2 center;
-uniform float scale;
+uniform HexagonalPixelate {
+  vec2 center;
+  float scale;
+};
 
 vec4 hexagonalPixelate_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec2 tex = (texCoord * texSize - center * texSize) / scale;

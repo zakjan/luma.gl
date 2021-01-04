@@ -18,13 +18,14 @@ struct DirectionalLight {
   vec3 direction;
 };
 
-uniform AmbientLight lighting_uAmbientLight;
-uniform PointLight lighting_uPointLight[MAX_LIGHTS];
-uniform DirectionalLight lighting_uDirectionalLight[MAX_LIGHTS];
-uniform int lighting_uPointLightCount;
-uniform int lighting_uDirectionalLightCount;
-
-uniform bool lighting_uEnabled;
+uniform Lights {
+  AmbientLight lighting_uAmbientLight;
+  PointLight lighting_uPointLight[MAX_LIGHTS];
+  DirectionalLight lighting_uDirectionalLight[MAX_LIGHTS];
+  int lighting_uPointLightCount;
+  int lighting_uDirectionalLightCount;
+  bool lighting_uEnabled;
+};
 
 float getPointLightAttenuation(PointLight pointLight, float distance) {
   return pointLight.attenuation.x

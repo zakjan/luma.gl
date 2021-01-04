@@ -8,9 +8,11 @@
  * @param size    The diameter of a dot in pixels.
  */
 const fs = `\
-uniform vec2 center;
-uniform float angle;
-uniform float size;
+uniform DotScreen {
+  vec2 center;
+  float angle;
+  float size;
+};
 
 float pattern(vec2 texSize, vec2 texCoord) {
   float scale = 3.1415 / size;

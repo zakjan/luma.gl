@@ -4,7 +4,9 @@
  * @param amount   0 to 1 (0 for no effect, 1 for maximum noise)
  */
 const fs = `\
-uniform float amount;
+uniform Noise {
+  float amount;
+};
 
 float rand(vec2 co) {
   return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);

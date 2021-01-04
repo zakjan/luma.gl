@@ -11,9 +11,11 @@
 
 // TODO pass texCoord to angle
 const fs = `\
-uniform vec2 center;
-uniform float angle;
-uniform float size;
+uniform ColorHalftone {
+  vec2 center;
+  float angle;
+  float size;
+};
 
 float scale = 3.1514 / size;
 

@@ -4,7 +4,9 @@
  * @param amount   0 to 1 (0 for no effect, 1 for full sepia coloring)
  */
 const fs = `\
-uniform float amount;
+uniform Sepia {
+  float amount;
+};
 
 vec4 sepia_filterColor(vec4 color) {
   float r = color.r;

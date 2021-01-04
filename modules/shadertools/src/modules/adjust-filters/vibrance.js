@@ -4,7 +4,9 @@
  * @param amount -1 to 1 (-1 is minimum vibrance, 0 is no change, and 1 is maximum vibrance)
  */
 const fs = `\
-uniform float amount;
+uniform Vibrance {
+  float amount;
+};
 
 vec4 vibrance_filterColor(vec4 color) {
   float average = (color.r + color.g + color.b) / 3.0;

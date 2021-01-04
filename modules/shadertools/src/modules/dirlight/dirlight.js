@@ -21,7 +21,9 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
 const vs = null;
 
 const fs = `\
-uniform vec3 dirlight_uLightDirection;
+uniform DirLight {
+  vec3 dirlight_uLightDirection;
+};
 
 /*
  * Returns color attenuated by angle from light source

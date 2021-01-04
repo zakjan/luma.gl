@@ -18,11 +18,13 @@
 import random from '../utils/random';
 
 const fs = `\
-uniform float blurRadius;
-uniform float gradientRadius;
-uniform vec2 start;
-uniform vec2 end;
-uniform bool invert;
+uniform TiltShift {
+  float blurRadius;
+  float gradientRadius;
+  vec2 start;
+  vec2 end;
+  bool invert;
+};
 
 vec2 tiltShift_getDelta(vec2 texSize) {
   vec2 vector = normalize((end - start) * texSize);
