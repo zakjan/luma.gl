@@ -2,7 +2,7 @@
 import test from 'tape-catch';
 import {Program, Texture2D} from '@luma.gl/webgl';
 import {isBrowser} from 'probe.gl/env';
-import {equals} from 'math.gl';
+import {equals} from '@math.gl/core';
 import {
   checkUniformValues,
   parseUniformName,
@@ -150,7 +150,8 @@ const WEBGL1_GOOD_UNIFORMS_ARRAY = {
   b: [false, false, true, true, false]
 };
 test('WebGL#Uniforms pre verify uniforms', t => {
-  t.ok(checkUniformValues(WEBGL1_GOOD_UNIFORMS, 'Uniform values are well formed'));
+  // @ts-ignore
+  t.ok(checkUniformValues(WEBGL1_GOOD_UNIFORMS), 'Uniform values are well formed');
 
   t.end();
 });

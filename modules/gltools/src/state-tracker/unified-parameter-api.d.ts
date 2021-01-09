@@ -11,7 +11,7 @@ export function setParameters(gl: WebGLRenderingContext, values: object): void;
  * by external code needs to be synchronized for the first time
  * @returns - a newly created map, with values keyed by GL parameters
 */
-export function getParameters(gl: WebGLRenderingContext, parameters?: object): object;
+export function getParameters(gl: WebGLRenderingContext, parameters?: object | number): object;
 
 /*
  * Reset all parameters to a (almost) pure context state

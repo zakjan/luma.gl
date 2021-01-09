@@ -1,9 +1,12 @@
 export default class Resource {
   readonly gl: WebGLRenderingContext;
+  readonly id: string;
+  readonly _handle: any;
+
+  get handle(): any;
 
   constructor(gl: WebGLRenderingContext, opts?: {});
   toString(): string;
-  get handle(): any;
   delete({ deleteChildren }?: { deleteChildren?: boolean }): this;
   bind(funcOrHandle?: any): any;
   unbind(): void;

@@ -44,10 +44,12 @@ export default class Query extends Resource {
   // Create a query class
   constructor(gl, opts = {}) {
     super(gl, opts);
-
     this.target = null;
     this._queryPending = false;
     this._pollingPromise = null;
+
+    /** @type {WebGL2RenderingContext} */
+    this.gl2 = gl;
 
     Object.seal(this);
   }
@@ -81,7 +83,7 @@ export default class Query extends Resource {
     }
 
     this.target = target;
-    this.gl.beginQuery(this.target, this.handle);
+    this.gl2.beginQuery(this.target, this.handle);
 
     return this;
   }
@@ -94,7 +96,7 @@ export default class Query extends Resource {
     }
 
     if (this.target) {
-      this.gl.endQuery(this.target);
+      this.gl2.endQuery(this.target);
       this.target = null;
       this._queryPending = true;
     }
@@ -107,7 +109,7 @@ export default class Query extends Resource {
       return false;
     }
 
-    const resultAvailable = this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT_AVAILABLE);
+    const resultAvailable = this.gl2.getQueryParameter(this.handle, GL_QUERY_RESULT_AVAILABLE);
     if (resultAvailable) {
       this._queryPending = false;
     }
@@ -116,11 +118,13 @@ export default class Query extends Resource {
 
   // Timing query is disjoint, i.e. results are invalid
   isTimerDisjoint() {
+    // @ts-ignore
     return this.gl.getParameter(GL_GPU_DISJOINT_EXT);
   }
 
   // Returns query result.
   getResult() {
+    // @ts-ignore
     return this.gl.getQueryParameter(this.handle, GL_QUERY_RESULT);
   }
 
@@ -157,10 +161,10 @@ export default class Query extends Resource {
   }
 
   _createHandle() {
-    return Query.isSupported(this.gl) ? this.gl.createQuery() : null;
+    return Query.isSupported(this.gl) ? this.gl2.createQuery() : null;
   }
 
   _deleteHandle() {
-    this.gl.deleteQuery(this.handle);
+    this.gl2.deleteQuery(this.handle);
   }
 }

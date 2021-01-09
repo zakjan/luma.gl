@@ -1,4 +1,5 @@
 import GL from '@luma.gl/constants';
+import {isWebGL2, assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
 
 import Resource from './resource';
 import Texture from './texture';
@@ -8,8 +9,7 @@ import {VertexShader, FragmentShader} from './shader';
 import ProgramConfiguration from './program-configuration';
 import {copyUniform, checkUniformValues} from './uniforms';
 
-import {isWebGL2, withParameters, log} from '@luma.gl/gltools';
-import {assertWebGL2Context, getKey} from '../webgl-utils';
+import {getKey} from '../webgl-utils';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
 import {uid, assert} from '../utils';
 
@@ -73,9 +73,9 @@ export default class Program extends Resource {
 
     // Setup varyings if supplied
     if (varyings && varyings.length > 0) {
-      assertWebGL2Context(this.gl);
+      const gl2 = assertWebGL2Context(this.gl);
       this.varyings = varyings;
-      this.gl.transformFeedbackVaryings(this.handle, varyings, bufferMode);
+      gl2.transformFeedbackVaryings(this.handle, varyings, bufferMode);
     }
 
     this._compileAndLink();
@@ -170,15 +170,20 @@ export default class Program extends Resource {
       this._bindTextures();
 
       withParameters(this.gl, parameters, () => {
-        // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
+        // Polyfilled WebGL1 context => the WebGL2 drawing methods are available
+        /** @type {WebGL2RenderingContext} */
+
+        // @ts-ignore
+        const gl2 = this.gl;
+
         if (isIndexed && isInstanced) {
-          this.gl.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
+          gl2.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
         } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
-          this.gl.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
+          gl2.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
         } else if (isIndexed) {
           this.gl.drawElements(drawMode, vertexCount, indexType, offset);
         } else if (isInstanced) {
-          this.gl.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
+          gl2.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
         } else {
           this.gl.drawArrays(drawMode, offset, vertexCount);
         }
@@ -289,10 +294,10 @@ export default class Program extends Resource {
       const type = this.gl.getShaderParameter(this.handle, GL.SHADER_TYPE);
       switch (type) {
         case GL.VERTEX_SHADER:
-          opts.vs = new VertexShader({handle: shaderHandle});
+          opts.vs = new VertexShader(this.gl, {handle: shaderHandle});
           break;
         case GL.FRAGMENT_SHADER:
-          opts.fs = new FragmentShader({handle: shaderHandle});
+          opts.fs = new FragmentShader(this.gl, {handle: shaderHandle});
           break;
         default:
       }
@@ -330,6 +335,7 @@ export default class Program extends Resource {
     log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
 
     // Avoid checking program linking error in production
+    // @ts-ignore
     if (gl.debug || log.level > 0) {
       const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
       if (!linked) {
@@ -352,42 +358,16 @@ export default class Program extends Resource {
     this._uniformCount = this._getParameter(GL.ACTIVE_UNIFORMS);
     for (let i = 0; i < this._uniformCount; i++) {
       const info = this.gl.getActiveUniform(this.handle, i);
-      const {name, isArray} = parseUniformName(info.name);
+      const {name} = parseUniformName(info.name);
       let location = gl.getUniformLocation(this.handle, name);
-      this._uniformSetters[name] = getUniformSetter(gl, location, info, isArray);
+      this._uniformSetters[name] = getUniformSetter(gl, location, info);
       if (info.size > 1) {
         for (let l = 0; l < info.size; l++) {
           location = gl.getUniformLocation(this.handle, `${name}[${l}]`);
-          this._uniformSetters[`${name}[${l}]`] = getUniformSetter(gl, location, info, isArray);
+          this._uniformSetters[`${name}[${l}]`] = getUniformSetter(gl, location, info);
         }
       }
     }
     this._textureIndexCounter = 0;
-  }
-
-  // TO BE REMOVED in v7?
-
-  // Rretrieves information about active uniforms identifed by their indices (`uniformIndices`)
-  // https://
-  // developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniforms
-  getActiveUniforms(uniformIndices, pname) {
-    return this.gl.getActiveUniforms(this.handle, uniformIndices, pname);
-  }
-
-  // Retrieves the index of a uniform block
-  getUniformBlockIndex(blockName) {
-    return this.gl.getUniformBlockIndex(this.handle, blockName);
-  }
-
-  // Retrieves information about an active uniform block (`blockIndex`)
-  // https://
-  // developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniformBlockParameter
-  getActiveUniformBlockParameter(blockIndex, pname) {
-    return this.gl.getActiveUniformBlockParameter(this.handle, blockIndex, pname);
-  }
-
-  // Binds a uniform block (`blockIndex`) to a specific binding point (`blockBinding`)
-  uniformBlockBinding(blockIndex, blockBinding) {
-    this.gl.uniformBlockBinding(this.handle, blockIndex, blockBinding);
   }
 }

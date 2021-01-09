@@ -2,12 +2,8 @@ import {formatValue, assert} from '../utils';
 
 // Prepares a table suitable for console.table
 /* eslint-disable max-statements, complexity */
-export function getDebugTableForUniforms({
-  header = 'Uniforms',
-  program,
-  uniforms,
-  undefinedOnly = false
-} = {}) {
+export function getDebugTableForUniforms(options = {}) {
+  const {header = 'Uniforms', program, uniforms, undefinedOnly = false} = options;
   assert(program);
 
   const SHADER_MODULE_UNIFORM_REGEXP = '.*_.*';

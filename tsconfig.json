@@ -9,6 +9,7 @@
     "allowSyntheticDefaultImports": true,
     "noEmit": true,
     "baseUrl": ".",
+    "rootDir": ".",
     "paths": {
       "@luma.gl/constants/*": ["modules/constants/src/*"],
       "@luma.gl/constants/test/*": ["modules/constants/test/*"],
@@ -35,7 +36,6 @@
   // Better to explicitly exclude things.
   // Points will be awarded every time an exception is removed!
   "exclude":[
-    "modules/constants/src/**/*",
     "modules/core/src/**/*",
     "modules/core/test/**/*",
     "modules/debug/src/**/*",
@@ -46,13 +46,6 @@
     "modules/experimental/test/**/*",
     "modules/test-utils/src/**/*",
     "modules/test-utils/test/**/*",
-    "modules/webgl/src/classes/**/*",
-    "modules/webgl/src/debug/**/*",
-    "modules/webgl/src/features/**/*",
-    "modules/webgl/src/glsl-utils/**/*",
-    "modules/webgl/src/utils/**/*",
-    "modules/webgl/src/webgl-utils/**/*",
-    "modules/webgl/src/*",
 
     "examples/**/*",
     "website/**/*",

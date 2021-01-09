@@ -15,7 +15,7 @@ import {assert} from '../utils/assert';
 import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-table';
 
 /** @type {types['polyfillContext']} */
-export default function polyfillContext(gl) {
+export function polyfillContext(gl) {
   // @ts-ignore
   gl.luma = gl.luma || {};
   // @ts-ignore
@@ -28,6 +28,10 @@ export default function polyfillContext(gl) {
     installOverrides(gl, {target: luma, target2: gl});
     luma.polyfilled = true;
   }
+
+  // TODO - only supporting a few members
+  /** @type {WebGL2RenderingContext} */
+  // @ts-ignore
   return gl;
 }
 

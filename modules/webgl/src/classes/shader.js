@@ -1,7 +1,6 @@
 import GL from '@luma.gl/constants';
-import {log} from '@luma.gl/gltools';
+import {assertWebGLContext, log} from '@luma.gl/gltools';
 import {parseGLSLCompilerError, getShaderName} from '../glsl-utils';
-import {assertWebGLContext} from '../webgl-utils';
 import {uid, assert} from '../utils';
 import Resource from './resource';
 
@@ -70,10 +69,10 @@ export class Shader extends Resource {
 
   // Debug method - Returns translated source if available
   getTranslatedSource() {
-    const extension = this.gl.getExtension('WEBGL.debug_shaders');
+    const extension = this.gl.getExtension('WEBGL_debug_shaders');
     return extension
       ? extension.getTranslatedShaderSource(this.handle)
-      : 'No translated source available. WEBGL.debug_shaders not implemented';
+      : 'No translated source available. WEBGL_debug_shaders not implemented';
   }
 
   // PRIVATE METHODS

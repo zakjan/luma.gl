@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
-import {log} from '@luma.gl/gltools';
+import {assertWebGLContext, log} from '@luma.gl/gltools';
 import Texture from './texture';
-import {assertWebGLContext} from '../webgl-utils';
+import {} from '../webgl-utils';
 
 const FACES = [
   GL.TEXTURE_CUBE_MAP_POSITIVE_X,
@@ -23,13 +23,13 @@ export default class TextureCube extends Texture {
     Object.seal(this);
   }
 
-  /* eslint-disable max-len, max-statements */
   initialize(props = {}) {
     const {mipmaps = true, parameters = {}} = props;
 
     // Store props for accessors
     this.opts = props;
 
+    // @ts-ignore
     this.setCubeMapImageData(props).then(() => {
       this.loaded = true;
 
@@ -41,9 +41,11 @@ export default class TextureCube extends Texture {
 
       this.setParameters(parameters);
     });
+    return this;
   }
 
   subImage({face, data, x = 0, y = 0, mipmapLevel = 0}) {
+    // @ts-ignore TODO - is this a bug?
     return this._subImage({target: face, data, x, y, mipmapLevel});
   }
 

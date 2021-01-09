@@ -85,8 +85,8 @@ function addLineNumbers(string, start = 1, delim = ': ') {
   const lines = string.split(/\r?\n/);
   const maxDigits = String(lines.length + start - 1).length;
   return lines.map((line, i) => {
-    const lineNumber = i + start;
-    const digits = String(lineNumber).length;
+    const lineNumber = String(i + start);
+    const digits = lineNumber.length;
     const prefix = padLeft(lineNumber, maxDigits - digits);
     return prefix + delim + line;
   });

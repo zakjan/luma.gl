@@ -4,7 +4,8 @@ import {getCompositeGLType} from '../webgl-utils/attribute-utils';
 import {formatValue} from '../utils';
 
 // Creates object suitable as input for console.table
-export function getDebugTableForVertexArray({vertexArray, header = 'Attributes'} = {}) {
+export function getDebugTableForVertexArray(options = {}) {
+  const {vertexArray, header = 'Attributes'} = options;
   if (!vertexArray.configuration) {
     return {};
   }
@@ -74,11 +75,13 @@ function getDebugTableRow(vertexArray, attribute, accessor, header) {
   if (attribute instanceof Buffer) {
     const buffer = attribute;
 
-    const {data, modified} = buffer.getDebugData();
-    marker = modified ? '*' : '';
+    const {data, changed} = buffer.getDebugData();
+    marker = changed ? '*' : '';
 
     value = data;
+    // @ts-ignore
     bytes = buffer.byteLength;
+    // @ts-ignore
     verts = bytes / data.BYTES_PER_ELEMENT / size;
 
     let format;
